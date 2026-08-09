@@ -45,3 +45,12 @@ data = "orders"
 date = "2021-02-10"
 # ลองดึงข้อมูลจาก API เส้น orders และเขียนลงไฟล์ CSV
 # YOUR CODE HERE
+response = requests.get(f"{API_URL}/{data}/?created_at={date}")
+data = response.json()
+with open(f"{DATA_FOLDER}/orders.csv", "w") as f:
+    writer = csv.writer(f)
+    header = data[0].keys()
+    writer.writerow(header)
+
+    for each in data:
+        writer.writerow(each.values())

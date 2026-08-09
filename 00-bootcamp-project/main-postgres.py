@@ -45,3 +45,6 @@ with open(f"{DATA_FOLDER}/order_items.csv", "w") as f:
     results = cursor.fetchall()
     for each in results:
         writer.writerow(each)
+
+# After complete the code, to extract data >> run cmd
+# poetry run python main-postgres.py

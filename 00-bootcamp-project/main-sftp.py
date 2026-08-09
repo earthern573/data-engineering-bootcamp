@@ -13,6 +13,7 @@ port = parser.getint("sftp_config", "port")
 
 # Security risk! Don't do this on production
 # You lose a protection against Man-in-the-middle attacks
+# In production system it is better to use asymmetric key (public and secret keys)
 cnopts = pysftp.CnOpts()
 cnopts.hostkeys = None
 

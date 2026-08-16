@@ -20,12 +20,12 @@ client = bigquery.Client(
     credentials=credentials,
 )
 
-job_config = bigquery.LoadJobConfig(
-    skip_leading_rows=1,
-    write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
-    source_format=bigquery.SourceFormat.CSV,
-    autodetect=True,
-)
+# job_config = bigquery.LoadJobConfig(
+#     skip_leading_rows=1,
+#     write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+#     source_format=bigquery.SourceFormat.CSV,
+#     autodetect=True,
+# )
 
 # # Addressess
 # data = "addresses"

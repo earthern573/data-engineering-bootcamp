@@ -11,10 +11,10 @@ DATA_FOLDER = "data" # 🚨 ตรวจสอบชื่อโฟลเดอ�
 # จะทำให้เราไม่ต้อง Hardcode Path ของไฟล์ไว้ในโค้ดของเรา
 # keyfile = os.environ.get("KEYFILE_PATH")
 
-keyfile = "YOUR_KEYFILE_PATH" # 🚨 แก้ไขชื่อ keyfile ให้ถูกต้อง
+keyfile = "deb-loading-to-bigquery.json" # 🚨 แก้ไขชื่อ keyfile ให้ถูกต้อง
 service_account_info = json.load(open(keyfile))
 credentials = service_account.Credentials.from_service_account_info(service_account_info)
-project_id = "YOUR_PROJECT_ID" # 🚨 แก้ไข project_id ให้สอดคล้องกับ GCP project ของตัวเอง
+project_id = "project-d069ecb2-d645-45e0-a1b" # 🚨 แก้ไข project_id ให้สอดคล้องกับ GCP project ของตัวเอง, also available in keyfile
 client = bigquery.Client(
     project=project_id,
     credentials=credentials,

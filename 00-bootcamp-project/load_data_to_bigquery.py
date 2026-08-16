@@ -66,7 +66,7 @@ job_config = bigquery.LoadJobConfig(
 
 # # ถึงตรงนี้เราโหลดข้อมูลไปแล้ว 2 ชุด ยังเหลืออีก 5 ชุดที่ต้องโหลดเพิ่ม
 # # YOUR CODE HERE
-data_with_out_partition = ['addresses', 'order_items', 'products', 'promos', 'users']
+data_with_out_partition = ['addresses', 'order_items', 'products', 'promos']
 # # data_with_partition = {{'data': 'events', 'dt': "2021-02-10"}, {'data': 'orders', 'dt': "2021-02-10"}, {'data': 'users', 'dt': "2020-10-23"}}
 data_with_partition = [
     {'data': 'events', 'dt': '2021-02-10'},

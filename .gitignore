@@ -194,3 +194,6 @@ data/
 
 # DEB dataengineercafe keyfiles
 dataengineercafe-*.json
+
+# bigquery key
+00-bootcamp-project/deb-loading-to-bigquery.json

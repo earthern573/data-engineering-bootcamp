@@ -200,5 +200,6 @@ dataengineercafe-*.json
 03-data-lake-and-big-data-processing/examples/uploading-to-gcs/deb-load-data-to-gcs.json
 03-data-lake-and-big-data-processing/pyspark/deb-load-data-to-gcs.json
 00-bootcamp-project/deb-load-data-to-gcs.json
+00-bootcamp-project/pyspark/deb-load-data-to-gcs.json
 
 03-data-lake-and-big-data-processing/iceberg/catalog

@@ -166,3 +166,8 @@ with iceberg_table.update_schema() as update:
     update.delete_column("email")
 
 print(catalog.load_table("transactions.sales_data").schema())
+
+# Next Step
+# Step 1: create folder `catalog` >> mkdir -p catalog
+# Step 2: run cmd `poetry run python main.py`
+# Step 3: objects will be created, reading the code above to explore about how `transaction` data are being ingested and processed.

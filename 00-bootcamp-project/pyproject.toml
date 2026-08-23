@@ -13,6 +13,7 @@ pysftp = "^0.2.9"
 psycopg2 = "^2.9.9"
 paramiko = ">=3,<4"
 google-cloud-bigquery = "^3.34.0"
+google-cloud-storage = "^3.13.1"
 
 [build-system]
 requires = ["poetry-core"]

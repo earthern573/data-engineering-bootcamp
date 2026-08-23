@@ -21,3 +21,20 @@ with DAG(
     t7 = EmptyOperator(task_id="t7")
     t8 = EmptyOperator(task_id="t8")
     t9 = EmptyOperator(task_id="t9")
+
+    # My dependencies
+    t1 >> [t2, t5]
+
+    t2 >> [t3, t6]
+    t5 >> [t6, t7]
+
+    t3 >> t4
+    [t6, t7] >> t8
+
+    [t4, t8] >> t9
+
+    # Solution
+    # t1 >> t2 >> t3 >> t4 >> t9
+    # t2 >> t6 >> t8 >> t9
+    # t1 >> t5 >> t6
+    # t5 >> t7 >> t8

@@ -197,3 +197,4 @@ dataengineercafe-*.json
 
 # bigquery key
 00-bootcamp-project/deb-loading-to-bigquery.json
+03-data-lake-and-big-data-processing/examples/uploading-to-gcs/deb-load-data-to-gcs.json

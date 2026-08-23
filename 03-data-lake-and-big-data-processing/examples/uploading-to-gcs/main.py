@@ -17,10 +17,12 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
     # destination_blob_name = "storage-object-name"
 
     # keyfile = os.environ.get("KEYFILE_PATH")
-    keyfile = "YOUR_KEYFILE_PATH"
+    # Step 1. Also, add key file to the `keyfile` variable
+    # Step 2. Add project-id, available in key file
+    keyfile = "deb-load-data-to-gcs.json"
     service_account_info = json.load(open(keyfile))
     credentials = service_account.Credentials.from_service_account_info(service_account_info)
-    project_id = "YOUR_GCP_PROJECT_ID"
+    project_id = "project-d069ecb2-d645-45e0-a1b"
 
     storage_client = storage.Client(
         project=project_id,
@@ -50,7 +52,10 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
         f"File {source_file_name} uploaded to {destination_blob_name}."
     )
 
-
+# To run this script 3 parameters are required, these parameters are based on coded written in the main.py, varied by the code authored.
+# They are bucket_name, source_file, destination_bucket
+# To run use the command `poetry run python main.py $bucket_name $source_file $destination`. Dont forgot to `poetry install` to install package.
+# Sample: `poetry run python main.py earth-deb06-week03-attempt01 events.avro cleaned/events.avro`
 if __name__ == "__main__":
     upload_blob(
         bucket_name=sys.argv[1],

@@ -10,7 +10,7 @@ def _world():
 
 with DAG(
     dag_id="every_month",
-    schedule="* * * * *",
+    schedule="@monthly",
     start_date=timezone.datetime(2026, 8, 30),
     catchup=False,
     tags=["DEB", "Skooldio"],

@@ -10,7 +10,7 @@ def _world():
 
 with DAG(
     dag_id="8_30_tuesdays",
-    schedule="* * * * *",
+    schedule="30 8 * * 2",
     start_date=timezone.datetime(2026, 8, 30),
     catchup=False,
     tags=["DEB", "Skooldio"],

@@ -126,6 +126,7 @@ with DAG(
     )
     
     # Submit a Spark app to transform data
+    # To run spark, it is crucial to add connection in Airflow by navigate to Admin >> Connections >> Add connection
     transform_data = SparkSubmitOperator(
         task_id="transform_data",
         application="/opt/spark/pyspark/demo_gcs.py",

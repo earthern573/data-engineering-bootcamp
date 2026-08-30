@@ -65,7 +65,7 @@ def _load_data_to_gcs():
 
 
 def _load_data_from_gcs_to_bigquery():
-    keyfile_bigquery = "YOUR_KEY_FILE_PATH"
+    keyfile_bigquery = "deb-loading-to-bigquery"
     service_account_info_bigquery = json.load(open(keyfile_bigquery))
     credentials_bigquery = service_account.Credentials.from_service_account_info(
         service_account_info_bigquery

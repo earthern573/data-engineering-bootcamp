@@ -85,7 +85,7 @@ def _load_data_from_gcs_to_bigquery():
         autodetect=True,
     )
 
-    bucket_name = "deb-bootcamp-YOUR_STUDENT_ID"
+    bucket_name = "deb-bootcamp-06-earth"
     destination_blob_name = f"cleaned/{BUSINESS_DOMAIN}/{DATA}/{DATA}.csv"
     job = bigquery_client.load_table_from_uri(
         f"gs://{bucket_name}/{destination_blob_name}",

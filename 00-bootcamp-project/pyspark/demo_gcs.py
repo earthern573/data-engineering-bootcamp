@@ -86,14 +86,10 @@ result = spark.sql("""
 """)
 
 # Step 4. Declare output destination, in GCS bucket
-# OUTPUT_PATH = "gs://earth-deb06-week03-attempt01/output"
-# [30-08-2026] modify path for Week-04 bootcamp
-OUTPUT_PATH = "gs://deb-bootcamp-06-earth/cleaned/greenery/addresses"
+OUTPUT_PATH = "gs://earth-deb06-week03-attempt01/output"
 
 # Step 5. [Optional] `.mode` write mode and `OUTPUT_PATH` declare at line 89
-# result.write.mode("overwrite").parquet(OUTPUT_PATH)
-# [30-08-2026] modify output file to csv
-result.write.mode("overwrite").csv(OUTPUT_PATH)
+result.write.mode("overwrite").parquet(OUTPUT_PATH)
 
 # Step 6. Modify Permission, by adding the following permission `storage.objects.get` and `storage.objects.list` to the custom role in IAM on Google Cloud.
 # Step 7. Run cmd `make submit`

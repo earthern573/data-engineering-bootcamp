@@ -6,7 +6,7 @@ from airflow.utils import timezone
 with DAG(
     dag_id="dag_with_custom_task_dependencies",
     schedule=None,
-    start_date=timezone.datetime(2025, 5, 25),
+    start_date=timezone.datetime(2026, 8, 30),
 ):
 
     t1 = EmptyOperator(task_id="t1")

@@ -133,8 +133,9 @@ with DAG(
     )
 
     # Load data from GCS to BigQuery
-    load_data_from_gcs_to_bigquery = EmptyOperator(
+    load_data_from_gcs_to_bigquery = PythonOperator(
         task_id="load_data_from_gcs_to_bigquery",
+        python_callable=_load_data_from_gcs_to_bigquery,
     )
 
     # Task dependencies

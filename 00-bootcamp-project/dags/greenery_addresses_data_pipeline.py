@@ -119,8 +119,9 @@ with DAG(
     )
 
     # Load data to GCS
-    load_data_to_gcs = EmptyOperator(
+    load_data_to_gcs = PythonOperator(
         task_id="load_data_to_gcs",
+        python_callable=_load_data_to_gcs,
     )
     
     # Submit a Spark app to transform data

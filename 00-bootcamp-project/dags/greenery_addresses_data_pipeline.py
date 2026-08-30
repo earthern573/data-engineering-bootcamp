@@ -46,7 +46,7 @@ def _extract_data():
 
 
 def _load_data_to_gcs():
-    keyfile_gcs = "deb-load-data-to-gcs"
+    keyfile_gcs = "deb-load-data-to-gcs.json"
     service_account_info_gcs = json.load(open(keyfile_gcs))
     credentials_gcs = service_account.Credentials.from_service_account_info(
         service_account_info_gcs
@@ -67,7 +67,7 @@ def _load_data_to_gcs():
 
 
 def _load_data_from_gcs_to_bigquery():
-    keyfile_bigquery = "deb-loading-to-bigquery"
+    keyfile_bigquery = "deb-loading-to-bigquery.json"
     service_account_info_bigquery = json.load(open(keyfile_bigquery))
     credentials_bigquery = service_account.Credentials.from_service_account_info(
         service_account_info_bigquery

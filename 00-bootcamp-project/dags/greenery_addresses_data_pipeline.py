@@ -3,6 +3,7 @@ import json
 
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import PythonOperator
 from airflow.utils import timezone
 
 import requests
@@ -112,8 +113,9 @@ with DAG(
 ):
 
     # Extract data from Postgres, API, or SFTP
-    extract_data = EmptyOperator(
+    extract_data = PythonOperator(
         task_id="extract_data",
+        python_callable=_extract_data,
     )
 
     # Load data to GCS

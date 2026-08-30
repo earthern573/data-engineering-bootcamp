@@ -88,7 +88,7 @@ def _load_data_from_gcs_to_bigquery():
     )
 
     bucket_name = "deb-bootcamp-06-earth"
-    destination_blob_name = f"cleaned/{BUSINESS_DOMAIN}/{DATA}/{DATA}.csv"
+    destination_blob_name = f"cleaned/{BUSINESS_DOMAIN}/{DATA}/*.csv"
     job = bigquery_client.load_table_from_uri(
         f"gs://{bucket_name}/{destination_blob_name}",
         table_id,
@@ -129,7 +129,7 @@ with DAG(
     # To run spark, it is crucial to add connection in Airflow by navigate to Admin >> Connections >> Add connection
     transform_data = SparkSubmitOperator(
         task_id="transform_data",
-        application="/opt/spark/pyspark/demo_gcs.py",
+        application="/opt/spark/pyspark/w04_addresses_from_gcs_to_bq.py",
         conn_id="my_spark",
     )
 

@@ -12,7 +12,7 @@ from google.oauth2 import service_account
 
 BUSINESS_DOMAIN = "greenery"
 LOCATION = "asia-southeast1"
-GCP_PROJECT_ID = "ํYOUR_GCP_PROJECT_ID"
+GCP_PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
 DAGS_FOLDER = "/opt/airflow/dags"
 DATA = "addresses"
 
@@ -44,14 +44,14 @@ def _extract_data():
 
 
 def _load_data_to_gcs():
-    keyfile_gcs = "YOUR_KEY_FILE_PATH"
+    keyfile_gcs = "deb-load-data-to-gcs"
     service_account_info_gcs = json.load(open(keyfile_gcs))
     credentials_gcs = service_account.Credentials.from_service_account_info(
         service_account_info_gcs
     )
 
     # Load data from Local to GCS
-    bucket_name = "deb-bootcamp-YOUR_STUDENT_ID"
+    bucket_name = "deb-bootcamp-06-earth"
     storage_client = storage.Client(
         project=GCP_PROJECT_ID,
         credentials=credentials_gcs,

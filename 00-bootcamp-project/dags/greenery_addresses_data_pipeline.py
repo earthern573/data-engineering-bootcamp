@@ -4,6 +4,7 @@ import json
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.utils import timezone
 
 import requests
@@ -125,8 +126,10 @@ with DAG(
     )
     
     # Submit a Spark app to transform data
-    transform_data = EmptyOperator(
+    transform_data = SparkSubmitOperator(
         task_id="transform_data",
+        application="/opt/spark/pyspark/demo_gcs.py",
+        conn_id="my_spark",
     )
 
     # Load data from GCS to BigQuery

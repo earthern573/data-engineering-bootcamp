@@ -16,7 +16,7 @@ BUSINESS_DOMAIN = "greenery"
 LOCATION = "asia-southeast1"
 GCP_PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
 DAGS_FOLDER = "/opt/airflow/dags"
-DATA = "addresses"
+data_no_partition = ['addresses', 'products', 'order_items', 'promos']
 
 
 def _extract_data():
@@ -25,24 +25,9 @@ def _extract_data():
     data = response.json()
 
     with open(f"{DAGS_FOLDER}/{DATA}.csv", "w") as f:
-        writer = csv.writer(f)
-        header = [
-            "address_id",
-            "address",
-            "zipcode",
-            "state",
-            "country",
-        ]
-        writer.writerow(header)
-        for each in data:
-            data = [
-                each["address_id"],
-                each["address"],
-                each["zipcode"],
-                each["state"],
-                each["country"],
-            ]
-            writer.writerow(data)
+        writer = csv.DictWriter(f, fieldnames=data[0].keys())
+        writer.writeheader()
+        writer.writerows(data)
 
 
 def _load_data_to_gcs():
@@ -105,39 +90,43 @@ default_args = {
     "owner": "airflow",
     "start_date": timezone.datetime(2021, 2, 9),
 }
-with DAG(
-    dag_id="greenery_addresses_data_pipeline",
-    default_args=default_args,
-    schedule="@daily",
-    catchup=False,
-    tags=["DEB", "Skooldio", "greenery"],
-):
 
-    # Extract data from Postgres, API, or SFTP
-    extract_data = PythonOperator(
-        task_id="extract_data",
-        python_callable=_extract_data,
-    )
+for item in data_no_partition:
 
-    # Load data to GCS
-    load_data_to_gcs = PythonOperator(
-        task_id="load_data_to_gcs",
-        python_callable=_load_data_to_gcs,
-    )
+    DATA = item
+    with DAG(
+        dag_id=f"greenery_{DATA}_data_pipeline",
+        default_args=default_args,
+        schedule="@daily",
+        catchup=False,
+        tags=["DEB", "Skooldio", "greenery"],
+    ):
+
+        # Extract data from Postgres, API, or SFTP
+        extract_data = PythonOperator(
+            task_id="extract_data",
+            python_callable=_extract_data,
+        )
+
+        # Load data to GCS
+        load_data_to_gcs = PythonOperator(
+            task_id="load_data_to_gcs",
+            python_callable=_load_data_to_gcs,
+        )
     
-    # Submit a Spark app to transform data
-    # To run spark, it is crucial to add connection in Airflow by navigate to Admin >> Connections >> Add connection
-    transform_data = SparkSubmitOperator(
-        task_id="transform_data",
-        application="/opt/spark/pyspark/w04_addresses_from_gcs_to_bq.py",
-        conn_id="my_spark",
-    )
+        # Submit a Spark app to transform data
+        # To run spark, it is crucial to add connection in Airflow by navigate to Admin >> Connections >> Add connection
+        transform_data = SparkSubmitOperator(
+            task_id="transform_data",
+            application=f"/opt/spark/pyspark/w04_{DATA}_from_gcs_to_bq.py",
+            conn_id="my_spark",
+        )
 
-    # Load data from GCS to BigQuery
-    load_data_from_gcs_to_bigquery = PythonOperator(
-        task_id="load_data_from_gcs_to_bigquery",
-        python_callable=_load_data_from_gcs_to_bigquery,
-    )
+        # Load data from GCS to BigQuery
+        load_data_from_gcs_to_bigquery = PythonOperator(
+            task_id="load_data_from_gcs_to_bigquery",
+            python_callable=_load_data_from_gcs_to_bigquery,
+        )
 
-    # Task dependencies
-    extract_data >> load_data_to_gcs >> transform_data >> load_data_from_gcs_to_bigquery
+        # Task dependencies
+        extract_data >> load_data_to_gcs >> transform_data >> load_data_from_gcs_to_bigquery

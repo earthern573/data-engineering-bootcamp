@@ -16,7 +16,9 @@ BUSINESS_DOMAIN = "greenery"
 LOCATION = "asia-southeast1"
 GCP_PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
 DAGS_FOLDER = "/opt/airflow/dags"
-data_no_partition = ['addresses', 'products', 'order-items', 'promos']
+# data_no_partition = ['addresses', 'products', 'order-items', 'promos']
+# can pass one table at a time for now
+data_no_partition = ['addresses']
 
 
 def _extract_data():

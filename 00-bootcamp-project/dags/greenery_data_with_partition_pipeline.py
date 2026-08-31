@@ -16,6 +16,8 @@ BUSINESS_DOMAIN = "greenery"
 LOCATION = "asia-southeast1"
 GCP_PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
 DAGS_FOLDER = "/opt/airflow/dags"
+# data with partition = ['events', 'orders', 'users']
+# can pass one table at a time for now
 data_with_partition = ['users']
 
 

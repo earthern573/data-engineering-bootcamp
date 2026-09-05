@@ -202,5 +202,7 @@ dataengineercafe-*.json
 00-bootcamp-project/deb-load-data-to-gcs.json
 00-bootcamp-project/pyspark/deb-load-data-to-gcs.json
 00-bootcamp-project/pyspark/deb-loading-to-bigquery.json
+00-bootcamp-project/dags/deb-load-data-to-gcs.json
+00-bootcamp-project/dags/deb-loading-to-bigquery.json
 
 03-data-lake-and-big-data-processing/iceberg/catalog

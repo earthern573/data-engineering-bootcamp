@@ -3,10 +3,10 @@ version: 2
 models:
 
   - name: stg_greenery__users
-    description: Greenery users
+    description: Staging models for Greenery users
     columns:
-      - name: user_id
-        description: User ID
+      - name: user_guid
+        description: User GUID
         data_tests:
           - not_null
           - unique
@@ -26,16 +26,16 @@ models:
         description: User phone numebr
         data_tests:
           - not_null
-      - name: created_at
-        description: Timestamp of when an event is created
+      - name: created_at_utc
+        description: UTC Timestamp of when an event is created
         data_tests:
           - not_null
-      - name: updated_at
-        description: Timestamp of when an event is updated
+      - name: updated_at_utc
+        description: UTC Timestamp of when an event is updated
         data_tests:
           - not_null
-      - name: address_id
-        description: Address ID
+      - name: address_guid
+        description: Address GUID
         data_tests:
           - not_null
 
@@ -83,3 +83,55 @@ models:
         description: Product ID
         data_tests:
           - not_null
+
+
+  - name: stg_greenery__orders
+    description: Staging models for Greenery orders
+    columns:
+      - name: order_guid
+        description: Order GUID
+        data_tests:
+          - not_null
+          - unique
+      - name: user_guid
+        description: User GUID
+      - name: promo_guid
+        description: Promo GUID
+      - name: address_guid
+        description: Address GUID
+      - name: order_created_at_utc
+        description: UTC Timestamp of when an order is created
+      - name: order_cost_usd
+        description: Cost of an order in USD
+      - name: shipping_cost_usd
+        description: Cost of an shipping in USD
+      - name: order_total_usd
+        description: Total Cost in USD
+      - name: tracking_guid
+        description: Tracking GUID
+      - name: shipping_service
+        description: Shipping provider used
+      - name: estimated_delivery_at_utc
+        description: Estimated UTC Timestamp of when an order will be delivered
+      - name: delivered_at_utc
+        description: UTC Timestamp of when an order is delivered
+      - name: order_status
+        description: Status of an order
+
+
+  - name: stg_greenery__addressess
+    description: Staging models for Greenery addresses
+    columns:
+      - name: address_guid
+        description: Address GUID
+        data_tests:
+          - not_null
+          - unique
+      - name: address
+        description: Address
+      - name: zipcode
+        description: Zipcode
+      - name: state
+        description: State
+      - name: country
+        description: Country

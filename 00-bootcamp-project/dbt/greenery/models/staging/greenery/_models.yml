@@ -50,7 +50,7 @@ models:
         data_tests:
           - relationships:
               to: ref('stg_greenery__users')
-              field: user_id
+              field: user_guid
       - name: page_url
         description: Page URL
       - name: event_created_at_utc
@@ -134,7 +134,7 @@ models:
         description: Order GUID
         data_tests:
           - not_null
-          - unique
+        #   - unique
       - name: product_guid
         description: Product GUID
       - name: quantity

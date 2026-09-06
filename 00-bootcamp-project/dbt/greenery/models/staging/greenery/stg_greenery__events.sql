@@ -1,14 +1,3 @@
-{{
-  config(
-    materialized="table",
-    partition_by={
-      "field": "created_at",
-      "data_type": "timestamp",
-      "granularity": "day"
-    }
-  )
-}}
-
 with
 
 source as (

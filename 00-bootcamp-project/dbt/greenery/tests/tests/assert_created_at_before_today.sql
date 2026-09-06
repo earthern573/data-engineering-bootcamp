@@ -1,5 +1,5 @@
 select
-    created_at
+    event_created_at_utc
 
 from {{ ref('stg_greenery__events') }}
-where created_at > CURRENT_TIMESTAMP()
+where event_created_at_utc > CURRENT_TIMESTAMP()

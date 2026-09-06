@@ -21,22 +21,22 @@ greenery:
       dbname: greenery
       schema: prod
 
-    dbt_zkan_bigquery:
+    dbt_earth_bigquery:
       type: bigquery
       method: service-account
-      project: dataengineercafe
-      dataset: dbt_zkan
+      project: project-d069ecb2-d645-45e0-a1b
+      dataset: dbt_earth
       threads: 1
-      keyfile: /workspaces/data-engineering-bootcamp/00-bootcamp-project/YOUR-KEYFILE.json
+      keyfile: /workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json
       location: asia-southeast1
 
     prod_bigquery:
       type: bigquery
       method: service-account
-      project: dataengineercafe
+      project: project-d069ecb2-d645-45e0-a1b
       dataset: deb_bootcamp
       threads: 1
-      keyfile: /workspaces/data-engineering-bootcamp/00-bootcamp-project/YOUR-KEYFILE.json
+      keyfile: /workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json
       location: asia-southeast1
 
-  target: dbt_zkan_bigquery
+  target: dbt_earth_bigquery

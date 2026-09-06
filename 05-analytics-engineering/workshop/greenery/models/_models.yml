@@ -7,9 +7,75 @@ models:
     columns:
       - name: user_id
         description: User ID
+        data_tests:
+          - not_null
+          - unique
+      - name: first_name
+        description: User first name
+        data_tests:
+          - not_null
+      - name: last_name
+        description: User last name
+        data_tests:
+          - not_null
+      - name: email
+        description: User email address
+        data_tests:
+          - not_null
+      - name: phone_number
+        description: User phone numebr
+        data_tests:
+          - not_null
+      - name: created_at
+        description: Timestamp of when an event is created
+        data_tests:
+          - not_null
+      - name: updated_at
+        description: Timestamp of when an event is updated
+        data_tests:
+          - not_null
+      - name: address_id
+        description: Address ID
+        data_tests:
+          - not_null
+
 
   - name: my_events
     description: Greenery events
     columns:
       - name: event_id
         description: Event ID
+        data_tests:
+          - not_null
+          - unique
+      - name: session_id
+        description: Session ID
+        data_tests:
+          - not_null
+      - name: event_type
+        description: Event Type
+        data_tests:
+          - accepted_values:
+              values: ['page_view', 'add_to_cart', 'checkout', 'package_shipped']
+      - name: user_id
+        description: User ID
+        data_tests:
+          - relationships:
+              to: ref('my_users')
+              field: user_id
+      - name: page_url
+        description: Page URL
+        data_tests:
+          - not_null
+      - name: created_at
+        description: Timestamp of when an event is created
+        data_tests:
+          - not_null
+      - name: order_id
+        description: Order ID
+        data_tests:
+          - not_nullnot_null
+      - name: product_id
+        description: Product ID
+        data_tests:
+          - not_null

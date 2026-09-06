@@ -43,15 +43,15 @@ models:
   - name: stg_greenery__events
     description: Greenery events
     columns:
-      - name: event_id
-        description: Event ID
+      - name: event_guid
+        description: Event GUID
         data_tests:
           - not_null
           - unique
           - dbt_expectations.expect_column_to_exist
           - dbt_expectations.expect_column_values_to_be_unique
-      - name: session_id
-        description: Session ID
+      - name: session_guid
+        description: Session GUID
         data_tests:
           - not_null
       - name: event_type
@@ -61,8 +61,8 @@ models:
               column_type: string
           - accepted_values:
               values: ['page_view', 'add_to_cart', 'checkout', 'package_shipped']
-      - name: user_id
-        description: User ID
+      - name: user_guid
+        description: User GUID
         data_tests:
           - relationships:
               to: ref('stg_greenery__users')
@@ -71,16 +71,16 @@ models:
         description: Page URL
         data_tests:
           - not_null
-      - name: created_at
-        description: Timestamp of when an event is created
+      - name: event_created_at_utc
+        description: UTC Timestamp of when an event is created
         data_tests:
           - not_null
-      - name: order_id
-        description: Order ID
+      - name: order_guid
+        description: Order GUID
         data_tests:
           - not_null
-      - name: product_id
-        description: Product ID
+      - name: product_guid
+        description: Product GUID
         data_tests:
           - not_null
 
@@ -135,3 +135,47 @@ models:
         description: State
       - name: country
         description: Country
+
+
+  - name: stg_greenery__promos
+    description: Staging models for Greenery promos
+    columns:
+      - name: promo_guid
+        description: Promos GUID
+        data_tests:
+          - not_null
+          - unique
+      - name: discount
+        description: Discount of a promo
+      - name: promo_status
+        description: Status of a promo
+
+
+  - name: stg_greenery__order_items
+    description: Staging models for Greenery order items
+    columns:
+      - name: order_guid
+        description: Order GUID
+        data_tests:
+          - not_null
+          - unique
+      - name: product_guid
+        description: Product GUID
+      - name: quantity
+        description: Product Quantity
+
+
+  - name: stg_greenery__products
+    description: Staging models for Greenery products
+    columns:
+      - name: product_guid
+        description: Product GUID
+        data_tests:
+          - not_null
+          - unique
+      - name: product_name
+        description: Product name
+      - name: price
+        description: Product price
+      - name: inventory
+        description: Product inventory

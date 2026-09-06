@@ -2,9 +2,21 @@ version: 2
 
 sources:
   - name: greenery
-    schema: public
-    database: greenery
+    schema: deb_bootcamp
+    database: project-d069ecb2-d645-45e0-a1b
 
     tables:
+      - name: addresses
+        description: Greenery addresses
+      - name: events
+        description: Greenery events
+      - name: order_items
+        description: Greenery order_items
+      - name: orders
+        description: Greenery orders
+      - name: products
+        description: Greenery products
+      - name: promos
+        description: Greenery promos
       - name: users
         description: Greenery users

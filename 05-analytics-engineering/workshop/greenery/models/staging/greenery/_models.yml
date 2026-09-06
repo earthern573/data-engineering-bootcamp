@@ -2,7 +2,7 @@ version: 2
 
 models:
 
-  - name: my_users
+  - name: stg_greenery__users
     description: Greenery users
     columns:
       - name: user_id
@@ -40,7 +40,7 @@ models:
           - not_null
 
 
-  - name: my_events
+  - name: stg_greenery__events
     description: Greenery events
     columns:
       - name: event_id
@@ -65,7 +65,7 @@ models:
         description: User ID
         data_tests:
           - relationships:
-              to: ref('my_users')
+              to: ref('stg_greenery__users')
               field: user_id
       - name: page_url
         description: Page URL

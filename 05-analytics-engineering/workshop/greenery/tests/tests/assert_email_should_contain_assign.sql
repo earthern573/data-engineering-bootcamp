@@ -1,5 +1,5 @@
 select
     email
 
-from {{ ref('my_users') }}
+from {{ ref('stg_greenery__users') }}
 where NOT CONTAINS_SUBSTR(email, '@')

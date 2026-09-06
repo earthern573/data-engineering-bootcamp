@@ -78,7 +78,7 @@ models:
       - name: order_id
         description: Order ID
         data_tests:
-          - not_nullnot_null
+          - not_null
       - name: product_id
         description: Product ID
         data_tests:
@@ -119,7 +119,7 @@ models:
         description: Status of an order
 
 
-  - name: stg_greenery__addressess
+  - name: stg_greenery__addresses
     description: Staging models for Greenery addresses
     columns:
       - name: address_guid

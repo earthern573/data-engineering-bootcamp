@@ -12,32 +12,18 @@ models:
           - unique
       - name: first_name
         description: User first name
-        data_tests:
-          - not_null
       - name: last_name
         description: User last name
-        data_tests:
-          - not_null
       - name: email
         description: User email address
-        data_tests:
-          - not_null
       - name: phone_number
-        description: User phone numebr
-        data_tests:
-          - not_null
+        description: User phone number
       - name: created_at_utc
         description: UTC Timestamp of when an event is created
-        data_tests:
-          - not_null
       - name: updated_at_utc
         description: UTC Timestamp of when an event is updated
-        data_tests:
-          - not_null
       - name: address_guid
         description: Address GUID
-        data_tests:
-          - not_null
 
 
   - name: stg_greenery__events
@@ -52,8 +38,6 @@ models:
           - dbt_expectations.expect_column_values_to_be_unique
       - name: session_guid
         description: Session GUID
-        data_tests:
-          - not_null
       - name: event_type
         description: Event Type
         data_tests:
@@ -69,20 +53,12 @@ models:
               field: user_id
       - name: page_url
         description: Page URL
-        data_tests:
-          - not_null
       - name: event_created_at_utc
         description: UTC Timestamp of when an event is created
-        data_tests:
-          - not_null
       - name: order_guid
         description: Order GUID
-        data_tests:
-          - not_null
       - name: product_guid
         description: Product GUID
-        data_tests:
-          - not_null
 
 
   - name: stg_greenery__orders

@@ -2,7 +2,7 @@ version: 2
 
 unit_tests:
   - name: test_is_valid_email_address
-    model: my_users
+    model: stg_greenery__users
     given:
       - input: source('greenery', 'users')
         rows:

@@ -669,4 +669,17 @@ with DAG(
     end = EmptyOperator(task_id="end", trigger_rule="one_success")
 
     # Task dependencies
-    start >> [information_schema_extraction, sample_data_extraction] >> data_masking >> system_prompt >> calling_LLM >> capture_tests_before >> write_schema >> capture_tests_after >> dbt_test_verification >> dbt_test >> generate_report >> end
+(
+    start
+    >> [information_schema_extraction, sample_data_extraction]
+    >> data_masking
+    >> system_prompt
+    >> calling_LLM
+    >> capture_tests_before
+    >> write_schema
+    >> capture_tests_after
+    >> dbt_test_verification
+    >> dbt_test
+    >> generate_report
+    >> end
+)

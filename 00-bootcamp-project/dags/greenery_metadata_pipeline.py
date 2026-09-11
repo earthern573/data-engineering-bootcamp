@@ -354,11 +354,17 @@ def _calling_LLM(LLM_provider, **context):
 
     return result
 
-def _export_metadata_to_yaml(DATA_from_LLM_response):
-    with open($read_yaml_from__calling_LLM, "w") as f:
-        writer = yaml.xxx
-        ...
-    return yaml_file
+def _write_schema(path_to_save_yaml, **context):
+    ti = context["ti"]
+
+    data_from_calling_LLM = ti.xcom_pull(
+        task_ids="calling_LLM"
+    )
+
+    with open(path_to_save_yaml, "w") as f:
+        f.write(data_from_calling_LLM)
+
+    return path_to_save_yaml
 
 def _dbt_test_verification(DATA_from_dbt_test_task):
     with open($DATA_from_dbt_test_task, "r") as f:
@@ -428,10 +434,12 @@ with DAG(
         },
     )
 
-    write_to_yaml = PythonOperator(
-        task_id="write_to_yaml",
-        python_callable=_write_to_yaml,
-        op_kwargs={"DATA_from_calling_LLM_task": $output_calling_LLM_task},
+    write_schema = PythonOperator(
+        task_id="write_schema",
+        python_callable=_write_schema,
+        op_kwargs={
+            "path_to_save_yaml": f"/workspaces/data-engineering-bootcamp/00-bootcamp-project/dbt/greenery/models/staging/greenery/_{TABLE_ID}_schema.yml",
+        },
     )
 
     dbt_test_task = DbtOperator(

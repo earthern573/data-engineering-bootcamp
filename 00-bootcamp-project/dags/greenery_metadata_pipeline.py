@@ -15,6 +15,7 @@ from airflow.utils import timezone
 from airflow.exceptions import AirflowSkipException
 from airflow.exceptions import AirflowException
 # from airflow.utils.state import State
+from airflow.utils.trigger_rule import TriggerRule
 
 # from google.cloud import bigquery, storage
 # from google.oauth2 import service_account
@@ -452,6 +453,122 @@ def _dbt_test_verification(**context):
 
     return result
 
+def _generate_report(**context):
+    ti = context["ti"]
+
+    # Get XCom results
+    information_schema = ti.xcom_pull(
+        task_ids="information_schema_extraction"
+    )
+
+    sample_data = ti.xcom_pull(
+        task_ids="sample_data_extraction"
+    )
+
+    masked_data = ti.xcom_pull(
+        task_ids="data_masking"
+    )
+
+    system_prompt_result = ti.xcom_pull(
+        task_ids="system_prompt"
+    )
+
+    tests_before = ti.xcom_pull(
+        task_ids="capture_tests_before"
+    )
+
+    tests_after = ti.xcom_pull(
+        task_ids="capture_tests_after"
+    )
+
+    verification = ti.xcom_pull(
+        task_ids="dbt_test_verification"
+    )
+
+    # Get task states
+    task_ids = [
+        "information_schema_extraction",
+        "sample_data_extraction",
+        "data_masking",
+        "system_prompt",
+        "calling_LLM",
+        "capture_tests_before",
+        "write_to_yaml",
+        "capture_tests_after",
+        "dbt_test_verification",
+        "dbt_test",
+    ]
+
+    task_status = {}
+
+    for task_id in task_ids:
+        task_instance = ti.get_dagrun().get_task_instance(task_id)
+
+        task_status[task_id] = (
+            task_instance.state if task_instance else "UNKNOWN"
+        )
+
+    report = {
+        "information_schema_extraction": {
+            "status": task_status["information_schema_extraction"],
+            "tables": len(
+                set(
+                    (
+                        x["project_id"],
+                        x["dataset_id"],
+                        x["table_id"],
+                    )
+                    for x in information_schema
+                )
+            ),
+            "columns": len(information_schema),
+        },
+
+        "sample_data_extraction": {
+            "status": task_status["sample_data_extraction"],
+            "records": len(sample_data),
+        },
+
+        "data_masking": {
+            "status": task_status["data_masking"],
+            "masked_records": len(masked_data),
+        },
+
+        "system_prompt": {
+            "status": task_status["system_prompt"],
+            "generated": system_prompt_result is not None,
+        },
+
+        "calling_LLM": {
+            "status": task_status["calling_LLM"],
+            "provider": LLM_provider,
+        },
+
+        "capture_tests_before": {
+            "status": task_status["capture_tests_before"],
+            "total_tests": len(tests_before),
+            "tests": tests_before,
+        },
+
+        "write_to_yaml": {
+            "status": task_status["write_to_yaml"],
+        },
+
+        "capture_tests_after": {
+            "status": task_status["capture_tests_after"],
+            "total_tests": len(tests_after),
+            "tests": tests_after,
+        },
+
+        "dbt_test_verification": verification,
+
+        "dbt_test": {
+            "status": task_status["dbt_test"],
+        },
+    }
+
+    return report
+
 default_args = {
     "owner": "airflow",
     "start_date": timezone.datetime(2021, 2, 9),
@@ -543,7 +660,13 @@ with DAG(
         profile_config=profile_config,
     )
 
+    generate_report = PythonOperator(
+        task_id="generate_report",
+        python_callable=_generate_report,
+        trigger_rule=TriggerRule.ALL_DONE,
+    )
+    
     end = EmptyOperator(task_id="end", trigger_rule="one_success")
 
     # Task dependencies
-    start >> [information_schema_extraction, sample_data_extraction] >> data_masking >> system_prompt >> calling_LLM >> capture_tests_before >> write_schema >> capture_tests_after >> dbt_test_verification >> dbt_test >> end
+    start >> [information_schema_extraction, sample_data_extraction] >> data_masking >> system_prompt >> calling_LLM >> capture_tests_before >> write_schema >> capture_tests_after >> dbt_test_verification >> dbt_test >> generate_report >> end

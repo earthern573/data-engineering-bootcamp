@@ -1,27 +1,20 @@
-# import csv
 import os
 import json
 import yaml
-import requests
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
-from airflow.operators.dbt import DbtOperator
-# from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from airflow.operators.empty import EmptyOperator
-# from airflow.utils.task_group import TaskGroup
 from airflow.utils import timezone
-from airflow.exceptions import AirflowSkipException
-from airflow.exceptions import AirflowException
-# from airflow.utils.state import State
+from airflow.operators.empty import EmptyOperator
 from airflow.utils.trigger_rule import TriggerRule
-
-# from google.cloud import bigquery, storage
-# from google.oauth2 import service_account
+from airflow.operators.python import PythonOperator
+from airflow.exceptions import AirflowException, AirflowSkipException
+from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 
 from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig
 from cosmos.profiles import GoogleCloudServiceAccountDictProfileMapping
+
+# Required packages:
+# pip install openai google-genai anthropic
 
 with open("service-account.json") as f:
     credentials = json.load(f)

@@ -25,6 +25,91 @@ REGION_ID = "asia-southeast1"
 DATASET_ID = 'deb-earth'
 TABLE_ID = ['$table']
 N_SAMPLE = 100
+PII_KEYWORDS = [
+    "name",
+    "first_name",
+    "last_name",
+    "full_name",
+    "email",
+    "phone",
+    "mobile",
+    "address",
+    "street",
+    "city",
+    "state",
+    "zipcode",
+    "zip_code",
+    "postal_code",
+    "date_of_birth",
+    "dob",
+]
+FINANCIAL_KEYWORDS = [
+    "account_number",
+    "bank_account",
+    "credit_card",
+    "card_number",
+    "debit_card",
+    "cvv",
+    "cvc",
+    "iban",
+    "swift",
+    "routing_number",
+    "salary",
+    "income",
+    "balance",
+    "payment",
+    "transaction",
+    "amount",
+    "price",
+    "cost",
+    "total",
+    "discount",
+    "tax",
+]
+CREDENTIAL_KEYWORDS = [
+    "password",
+    "passwd",
+    "passcode",
+    "pin",
+    "secret",
+    "api_key",
+    "apikey",
+    "access_token",
+    "refresh_token",
+    "auth_token",
+    "authorization",
+    "private_key",
+    "client_secret",
+]
+IDENTIFIER_KEYWORDS = [
+    "national_id",
+    "citizen_id",
+    "passport",
+    "driver_license",
+    "social_security",
+    "tax_id",
+]
+HEALTH_KEYWORDS = [
+    "medical",
+    "patient",
+    "diagnosis",
+    "disease",
+    "medication",
+    "prescription",
+    "blood_type",
+    "health",
+]
+SKIP_KEYWORDS = [
+    "product_name",
+]
+
+MASKING_POLICY = {
+    "PII_MASKING": PII_KEYWORDS,
+    "FINANCIAL_MASKING": FINANCIAL_KEYWORDS,
+    "CREDENTIAL_MASKING": CREDENTIAL_KEYWORDS,
+    "IDENTIFIER_MASKING": IDENTIFIER_KEYWORDS,
+    "HEALTH_MASKING": HEALTH_KEYWORDS,
+}
 
 def _extract_information_schema(
     project_id=PROJECT_ID,
@@ -84,22 +169,107 @@ def _extract_sample_data(
 
     return df.to_dict(orient="records")
     
-def _masking_data(DATA_from_sample_data_extraction_task, DATA_from_information_schema_extraction):
-    # extract column from DATA_from_information_schema_extraction
-    df_column = DATA_from_information_schema_extraction['column_name']
-    df_policy_tag = DATA_from_information_schema_extraction['policy_tag']
-    df_column_sample = DATA_from_sample_data_extraction_task['column_value']
-    df_column_mask = ['']
+def _classify_column(column_name):
 
-    for df_column_element, df_policy_tag_element IN df_column, df_policy_tag:
-        for df_column_sample_element IN df_column_sample:
-            if df_policy_tag:
-                df_column_sample_element = df_column_mask.('Masking')
+    column_name = column_name.lower()
 
-    return df_column_sample_element
+    if column_name in SKIP_KEYWORDS:
+        return None
 
-def _system_prompt(DATA_from_data_masking, DATA_from_information_schema_extraction):
-    system_prompt = f"schema: {DATA_from_information_schema_extraction} and sample_data_masking: {DATA_from_data_masking}, ..."
+    for category, keywords in MASKING_POLICY.items():
+
+        for keyword in keywords:
+
+            if keyword in column_name:
+                return category
+
+    return None
+
+def _data_masking(**context):
+
+    ti = context["ti"]
+
+    sample_data = ti.xcom_pull(
+        task_ids="sample_data_extraction"
+    )
+
+    information_schema = ti.xcom_pull(
+        task_ids="information_schema_extraction"
+    )
+
+    for column in information_schema:
+
+        column_name = column["column_name"]
+
+        category = _classify_column(column_name)
+
+        if category is None:
+            continue
+
+        for row in sample_data:
+
+            if column_name in row:
+                row[column_name] = f"MASKED_{category}"
+
+    return sample_data
+
+def _system_prompt(path_to_yaml, **context):
+
+    ti = context["ti"]
+
+    data_from_data_masking = ti.xcom_pull(
+        task_ids="data_masking"
+    )
+
+    data_from_information_schema = ti.xcom_pull(
+        task_ids="information_schema_extraction"
+    )
+
+    with open(path_to_yaml, "r") as f:
+        expected_sample_model_schema = f.read()
+
+    system_prompt = f"""
+        You are a data engineering assistant responsible for generating a dbt schema YAML file.
+
+        You are given:
+
+        1. The extracted database schema:
+        {data_from_information_schema}
+
+        2. Masked sample data:
+        {data_from_data_masking}
+
+        3. The expected dbt YAML schema:
+        {expected_sample_model_schema}
+
+
+        STRICT REQUIREMENTS:
+
+        - Generate the final output following the expected dbt YAML schema exactly.
+        - Do NOT skip any model.
+        - Do NOT skip any column.
+        - Do NOT remove columns even if the column appears unimportant.
+        - Preserve every model and column from the provided database schema.
+        - Use the expected YAML structure as the required format.
+        - Preserve the `version: 2` structure.
+        - Each model must be under `models:`.
+        - Each column must be under its corresponding model's `columns:`.
+        - Include a `name` for every model and every column.
+        - Include descriptions where they can be determined from the provided schema or sample data.
+        - Generate appropriate dbt data tests when they can be determined from the provided information.
+        - Do not invent columns that do not exist in the source schema.
+        - Do not invent data values.
+        - Do not expose or reconstruct masked sensitive data.
+        - Do not change the masked values back to their original values.
+        - Preserve existing relationships, uniqueness, nullability, accepted values, and other test requirements when they can be determined.
+        - The final result must be valid YAML.
+        - Return ONLY the YAML content.
+        - Do NOT include Markdown code fences.
+        - Do NOT include explanations before or after the YAML.
+
+        The expected structure is the template and must be followed strictly.
+        """
+
     return system_prompt
 
 def _calling_LLM(DATA_from_system_prompt):
@@ -162,14 +332,15 @@ with DAG(
 
     data_masking = PythonOperator(
         task_id="data_masking",
-        python_callable=_masking_data,
-        op_kwargs={"DATA_from_sample_data_extraction_task": $output_sample_data_extraction_task, "DATA_from_information_schema_extraction": $output_information_schema_extraction_task},
+        python_callable=_data_masking,
     )
 
     system_prompt = PythonOperator(
         task_id="system_prompt",
         python_callable=_system_prompt,
-        op_kwargs={"DATA_from_data_masking_task": $output_data_masking_task, "DATA_from_information_schema_extraction": $output_information_schema_extraction_task},
+        op_kwargs={
+            "path_to_yaml": "00-bootcamp-project/dbt/greenery/models/staging/greenery/_models.yml",
+        },
     )
 
     calling_LLM = PythonOperator(

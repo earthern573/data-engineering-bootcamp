@@ -1,10 +1,11 @@
 # import csv
-# import json
+import json
 import yaml
 import requests
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from airflow.operators.dbt import DbtOperator
 # from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.operators.empty import EmptyOperator
@@ -15,6 +16,44 @@ from airflow.utils import timezone
 
 # from google.cloud import bigquery, storage
 # from google.oauth2 import service_account
+
+with open("service-account.json") as f:
+    credentials = json.load(f)
+
+PROJECT_ID = credentials["project_id"]
+REGION = "region-asia-southeast1"
+
+def _extract_information_schema(
+    project_id=PROJECT_ID,
+    region=REGION,
+):
+    hook = BigQueryHook(
+        gcp_conn_id="google_cloud_default",
+        use_legacy_sql=False,
+    )
+
+    sql = f"""
+        SELECT
+            c.table_catalog AS project_id
+            , c.table_schema AS dataset_id
+            , c.table_name AS table_id
+            , c.column_name
+            , c.data_type
+            , p.description
+        FROM
+            `{project_id}.{region}.INFORMATION_SCHEMA.COLUMNS` AS c
+        LEFT JOIN
+            `{project_id}.{region}.INFORMATION_SCHEMA.COLUMN_FIELD_PATH` AS p
+        ON
+            c.table_catalog = p.table_catalog
+            AND c.table_schema = p.table_schema
+            AND c.table_name = p.table_name
+            AND c.column_name = p.column_name
+    """
+
+    records = hook.get_records(sql)
+
+    return records
 
 def _masking_data(DATA_from_sample_data_extraction_task, DATA_from_information_schema_extraction):
     # extract column from DATA_from_information_schema_extraction
@@ -72,8 +111,13 @@ with DAG(
 
     start = EmptyOperator(task_id="start") 
 
-    information_schema_extraction = DbtOperator(
-        # dbt run --project-dir $project_directory -t $target --select metadata.$model_name
+    information_schema_extraction = PythonOperator(
+        task_id="information_schema_extraction",
+        python_callable=_extract_information_schema,
+        op_kwargs={
+            "project_id": PROJECT_ID,
+            "region": REGION,
+        },
     )
 
     sample_data_extraction = DbtOperator(

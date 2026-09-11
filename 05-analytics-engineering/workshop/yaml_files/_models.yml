@@ -2,13 +2,13 @@ version: 2
 
 models:
 
-  - name: my_users
+  - name: stg_greenery__users
     description: Greenery users
     columns:
       - name: user_id
         description: User ID
 
-  - name: my_events
+  - name: stg_greenery__events
     description: Greenery events
     columns:
       - name: event_id

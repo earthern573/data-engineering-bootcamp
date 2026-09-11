@@ -1,0 +1,42 @@
+greenery:
+
+  outputs:
+    dbt_zkan:
+      type: postgres
+      threads: 1
+      host: localhost
+      port: 5432
+      user: postgres
+      pass: "{{ env_var('DBT_ENV_SECRET_PG_PASSWORD') }}"
+      dbname: greenery
+      schema: dbt_zkan
+
+    prod:
+      type: postgres
+      threads: 1
+      host: localhost
+      port: 5432
+      user: postgres
+      pass: "{{ env_var('DBT_ENV_SECRET_PG_PASSWORD') }}"
+      dbname: greenery
+      schema: prod
+
+    dbt_earth_bigquery:
+      type: bigquery
+      method: service-account
+      project: project-d069ecb2-d645-45e0-a1b
+      dataset: deb_earth
+      threads: 1
+      keyfile: /workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json
+      location: asia-southeast1
+
+    prod_bigquery:
+      type: bigquery
+      method: service-account
+      project: project-d069ecb2-d645-45e0-a1b
+      dataset: deb_bootcamp
+      threads: 1
+      keyfile: /workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json
+      location: asia-southeast1
+
+  target: dbt_earth_bigquery

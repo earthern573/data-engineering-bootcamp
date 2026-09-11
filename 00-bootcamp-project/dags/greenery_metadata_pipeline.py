@@ -13,6 +13,7 @@ from airflow.operators.empty import EmptyOperator
 # from airflow.utils.task_group import TaskGroup
 from airflow.utils import timezone
 from airflow.exceptions import AirflowSkipException
+from airflow.exceptions import AirflowException
 # from airflow.utils.state import State
 
 # from google.cloud import bigquery, storage
@@ -404,16 +405,51 @@ def _capture_tests(path_to_yaml):
 
     return tests
 
-def _dbt_test_verification(DATA_from_dbt_test_task):
-    with open($DATA_from_dbt_test_task, "r") as f:
-        dbt_result = yaml.xxx
-        ...
+def _dbt_test_verification(**context):
+    ti = context["ti"]
 
-    system_prompt = f"here is the test result: {DATA_from_dbt_test_task}, please ... output result PASS or FAIL"
+    before_tests = ti.xcom_pull(
+        task_ids="capture_tests_before"
+    )
 
-    # request model to selected LLM
-    result = system_prompt.json()
-    
+    after_tests = ti.xcom_pull(
+        task_ids="capture_tests_after"
+    )
+
+    before_tests = set(
+        (
+            item["model"],
+            item["column"],
+            str(item["test"]),
+        )
+        for item in before_tests
+    )
+
+    after_tests = set(
+        (
+            item["model"],
+            item["column"],
+            str(item["test"]),
+        )
+        for item in after_tests
+    )
+
+    removed_tests = before_tests - after_tests
+    added_tests = after_tests - before_tests
+
+    if removed_tests or added_tests:
+        raise AirflowException(
+            f"DBT test definitions changed.\n"
+            f"Removed tests: {removed_tests}\n"
+            f"Added tests: {added_tests}"
+        )
+
+    result = {
+        "status": "PASSED",
+        "removed_tests": [],
+        "added_tests": [],
+    }
+
     return result
 
 default_args = {
@@ -499,10 +535,9 @@ with DAG(
     dbt_test_verification = PythonOperator(
         task_id="dbt_test_verification",
         python_callable=_dbt_test_verification,
-        op_kwargs={"DATA_from_dbt_test_task_task": $output_dbt_test_task_task},
     )
 
     end = EmptyOperator(task_id="end", trigger_rule="one_success")
 
     # Task dependencies
-    start >> [information_schema_extraction, sample_data_extraction] >> data_masking >> system_prompt >> calling_LLM >> write_to_yaml >> dbt_test_task >> dbt_test_verification >> end
+    start >> [information_schema_extraction, sample_data_extraction] >> data_masking >> system_prompt >> calling_LLM >> capture_tests_before >> write_to_yaml >> capture_tests_after >> dbt_test_task >> dbt_test_verification >> end

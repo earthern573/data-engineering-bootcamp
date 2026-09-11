@@ -21,11 +21,14 @@ with open("service-account.json") as f:
     credentials = json.load(f)
 
 PROJECT_ID = credentials["project_id"]
-REGION = "region-asia-southeast1"
+REGION_ID = "asia-southeast1"
+DATASET_ID = 'deb-earth'
+TABLE_ID = ['$table']
+N_SAMPLE = 100
 
 def _extract_information_schema(
     project_id=PROJECT_ID,
-    region=REGION,
+    region=REGION_ID,
 ):
     hook = BigQueryHook(
         gcp_conn_id="google_cloud_default",
@@ -55,6 +58,32 @@ def _extract_information_schema(
 
     return records
 
+def _extract_sample_data(
+    project_id=PROJECT_ID,
+    dataset_id=DATASET_ID,
+    table_id=TABLE_ID,
+    samples=N_SAMPLE,
+):
+    hook = BigQueryHook(
+        gcp_conn_id="google_cloud_default",
+        use_legacy_sql=False,
+    )
+
+    bq_client = hook.get_client(project_id=project_id)
+
+    table_ref = f"{project_id}.{dataset_id}.{table_id}"
+
+    table_obj = bq_client.get_table(table_ref)
+
+    rows = bq_client.list_rows(
+        table_obj,
+        max_results=samples,
+    )
+
+    df = rows.to_dataframe()
+
+    return df.to_dict(orient="records")
+    
 def _masking_data(DATA_from_sample_data_extraction_task, DATA_from_information_schema_extraction):
     # extract column from DATA_from_information_schema_extraction
     df_column = DATA_from_information_schema_extraction['column_name']
@@ -116,13 +145,19 @@ with DAG(
         python_callable=_extract_information_schema,
         op_kwargs={
             "project_id": PROJECT_ID,
-            "region": REGION,
+            "region": REGION_ID,
         },
     )
 
-    sample_data_extraction = DbtOperator(
-        # dbt shows --project-dir $project_directory -t $target --select $target_dataset.target_table --limit 2000
-        # need to find out how to extract the data and pass into the next task
+    sample_data_extraction = PythonOperator(
+        task_id="sample_data_extraction",
+        python_callable=_extract_sample_data,
+        op_kwargs={
+            "project_id": PROJECT_ID,
+            "dataset_id": DATASET_ID,
+            "table_id": TABLE_ID,
+            "samples": N_SAMPLE,
+        },
     )
 
     data_masking = PythonOperator(

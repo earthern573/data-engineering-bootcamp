@@ -537,7 +537,13 @@ with DAG(
         python_callable=_dbt_test_verification,
     )
 
+    dbt_test = DbtTaskGroup(
+        group_id="dbt_test",
+        project_config=ProjectConfig(DBT_PROJECT_DIR),
+        profile_config=profile_config,
+    )
+
     end = EmptyOperator(task_id="end", trigger_rule="one_success")
 
     # Task dependencies
-    start >> [information_schema_extraction, sample_data_extraction] >> data_masking >> system_prompt >> calling_LLM >> capture_tests_before >> write_to_yaml >> capture_tests_after >> dbt_test_task >> dbt_test_verification >> end
+    start >> [information_schema_extraction, sample_data_extraction] >> data_masking >> system_prompt >> calling_LLM >> capture_tests_before >> write_schema >> capture_tests_after >> dbt_test_verification >> dbt_test >> end

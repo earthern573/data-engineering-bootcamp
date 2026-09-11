@@ -1,4 +1,5 @@
 # import csv
+import os
 import json
 import yaml
 import requests
@@ -11,7 +12,7 @@ from airflow.operators.dbt import DbtOperator
 from airflow.operators.empty import EmptyOperator
 # from airflow.utils.task_group import TaskGroup
 from airflow.utils import timezone
-# from airflow.exceptions import AirflowSkipException
+from airflow.exceptions import AirflowSkipException
 # from airflow.utils.state import State
 
 # from google.cloud import bigquery, storage
@@ -25,6 +26,7 @@ REGION_ID = "asia-southeast1"
 DATASET_ID = 'deb-earth'
 TABLE_ID = ['$table']
 N_SAMPLE = 100
+DEFAULT_LLM_PROVIDER = 'GEMINI'
 PII_KEYWORDS = [
     "name",
     "first_name",
@@ -272,9 +274,84 @@ def _system_prompt(path_to_yaml, **context):
 
     return system_prompt
 
-def _calling_LLM(DATA_from_system_prompt):
-    # request model to selected LLM
-    result = requests.json()
+def _LLM_selector(llm_provider):
+
+    if llm_provider == "OPENAI":
+        return os.getenv("OPENAI_API_KEY")
+
+    elif llm_provider == "GEMINI":
+        return os.getenv("GEMINI_API_KEY")
+
+    elif llm_provider == "CLAUDE":
+        return os.getenv("CLAUDE_API_KEY")
+
+    else:
+        raise AirflowSkipException(
+            f"Unsupported LLM provider: {llm_provider}"
+        )
+
+def _calling_LLM(LLM_provider, **context):
+
+    ti = context["ti"]
+
+    system_prompt = ti.xcom_pull(
+        task_ids="system_prompt"
+    )
+
+    API_KEY = _LLM_selector(LLM_provider)
+
+    if LLM_provider == "OPENAI":
+
+        from openai import OpenAI
+
+        client = OpenAI(api_key=API_KEY)
+
+        response = client.responses.create(
+            model="gpt-5",
+            instructions=system_prompt,
+            input="Generate the dbt YAML."
+        )
+
+        result = response.output_text
+
+    elif LLM_provider == "GEMINI":
+
+        from google import genai
+
+        client = genai.Client(api_key=API_KEY)
+
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=system_prompt
+        )
+
+        result = response.text
+
+    elif LLM_provider == "CLAUDE":
+
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=API_KEY)
+
+        response = client.messages.create(
+            model="claude-opus-5",
+            max_tokens=8192,
+            system=system_prompt,
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Generate the dbt YAML."
+                }
+            ]
+        )
+
+        result = response.content[0].text
+
+    else:
+        raise ValueError(
+            f"Unsupported LLM provider: {LLM_provider}"
+        )
+
     return result
 
 def _export_metadata_to_yaml(DATA_from_LLM_response):
@@ -346,7 +423,9 @@ with DAG(
     calling_LLM = PythonOperator(
         task_id="calling_LLM",
         python_callable=_calling_LLM,
-        op_kwargs={"DATA_from_system_prompt_task": $output_system_prompt_task},
+        op_kwargs={
+            "LLM_provider": DEFAULT_LLM_PROVIDER,
+        },
     )
 
     write_to_yaml = PythonOperator(

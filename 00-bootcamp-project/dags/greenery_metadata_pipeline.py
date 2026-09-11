@@ -18,6 +18,9 @@ from airflow.exceptions import AirflowSkipException
 # from google.cloud import bigquery, storage
 # from google.oauth2 import service_account
 
+from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig
+from cosmos.profiles import GoogleCloudServiceAccountDictProfileMapping
+
 with open("service-account.json") as f:
     credentials = json.load(f)
 
@@ -112,6 +115,20 @@ MASKING_POLICY = {
     "IDENTIFIER_MASKING": IDENTIFIER_KEYWORDS,
     "HEALTH_MASKING": HEALTH_KEYWORDS,
 }
+
+DBT_PROJECT_DIR = "/opt/airflow/dbt/greenery"
+
+profile_config = ProfileConfig(
+    profile_name="greenery",
+    target_name="dev",
+    profile_mapping=GoogleCloudServiceAccountDictProfileMapping(
+        conn_id="bigquery_dbt",
+        profile_args={
+            "schema": "dataset_output",
+            "location": "asia-southeast1",
+        },
+    ),
+)
 
 def _extract_information_schema(
     project_id=PROJECT_ID,
@@ -366,6 +383,27 @@ def _write_schema(path_to_save_yaml, **context):
 
     return path_to_save_yaml
 
+def _capture_tests(path_to_yaml):
+    with open(path_to_yaml, "r") as f:
+        data = yaml.safe_load(f)
+
+    tests = []
+
+    for model in data.get("models", []):
+        model_name = model.get("name")
+
+        for column in model.get("columns", []):
+            column_name = column.get("name")
+
+            for test in column.get("tests", []):
+                tests.append({
+                    "model": model_name,
+                    "column": column_name,
+                    "test": test,
+                })
+
+    return tests
+
 def _dbt_test_verification(DATA_from_dbt_test_task):
     with open($DATA_from_dbt_test_task, "r") as f:
         dbt_result = yaml.xxx
@@ -434,6 +472,14 @@ with DAG(
         },
     )
 
+    capture_tests_before = PythonOperator(
+        task_id="capture_tests_before",
+        python_callable=_capture_tests,
+        op_kwargs={
+            "path_to_yaml": "00-bootcamp-project/dbt/greenery/models/staging/greenery/_models.yml",
+        },
+    )
+
     write_schema = PythonOperator(
         task_id="write_schema",
         python_callable=_write_schema,
@@ -442,9 +488,12 @@ with DAG(
         },
     )
 
-    dbt_test_task = DbtOperator(
-        # dbt test --project-dir $project_directory -t $target --select $target_dataset.target_table
-        # need to fensure yaml from the previous task write_to_yaml is add to correct model folder
+    capture_tests_after = PythonOperator(
+        task_id="capture_tests_after",
+        python_callable=_capture_tests,
+        op_kwargs={
+            "path_to_yaml": "base/greenery/models/staging/greenery/_models.yml",
+        },
     )
 
     dbt_test_verification = PythonOperator(

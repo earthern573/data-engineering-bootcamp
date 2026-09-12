@@ -29,7 +29,7 @@ REGION_ID = "asia-southeast1"
 DATASET_ID = 'deb-earth'
 TABLE_ID = ['$table']
 N_SAMPLE = 100
-DEFAULT_LLM_PROVIDER = 'GEMINI'
+DEFAULT_LLM_PROVIDER = 'OPENAI'
 PII_KEYWORDS = [
     "name",
     "first_name",
@@ -107,13 +107,17 @@ HEALTH_KEYWORDS = [
 SKIP_KEYWORDS = [
     "product_name",
 ]
-
 MASKING_POLICY = {
     "PII_MASKING": PII_KEYWORDS,
     "FINANCIAL_MASKING": FINANCIAL_KEYWORDS,
     "CREDENTIAL_MASKING": CREDENTIAL_KEYWORDS,
     "IDENTIFIER_MASKING": IDENTIFIER_KEYWORDS,
     "HEALTH_MASKING": HEALTH_KEYWORDS,
+}
+DEFAULT_MODELS = {
+    "OPENAI": "gpt-5-mini",
+    "GEMINI": "gemini-3.8-flash",
+    "CLAUDE": "claude-sonnet-5",
 }
 
 DBT_PROJECT_DIR = "/opt/airflow/dbt/greenery"
@@ -294,20 +298,79 @@ def _system_prompt(path_to_yaml, **context):
 def _LLM_selector(llm_provider):
 
     if llm_provider == "OPENAI":
-        return os.getenv("OPENAI_API_KEY")
+        return "llm_openai"
 
     elif llm_provider == "GEMINI":
-        return os.getenv("GEMINI_API_KEY")
+        return "llm_gemini"
 
     elif llm_provider == "CLAUDE":
-        return os.getenv("CLAUDE_API_KEY")
+        return "llm_claude"
 
     else:
         raise AirflowSkipException(
             f"Unsupported LLM provider: {llm_provider}"
         )
 
-def _calling_LLM(LLM_provider, **context):
+def _llm_connection_test(llm_provider, model=None):
+
+    if model is None:
+        model = DEFAULT_MODELS[llm_provider]
+
+    conn_id = _LLM_selector(llm_provider)
+
+    try:
+        conn = BaseHook.get_connection(conn_id)
+        api_key = conn.password
+
+        if not api_key:
+            raise Exception(
+                f"API key not found in connection: {conn_id}"
+            )
+
+        if llm_provider == "OPENAI":
+            client = OpenAI(api_key=api_key)
+
+            response = client.responses.create(
+                model=model,
+                input="Reply with OK."
+            )
+
+        elif llm_provider == "GEMINI":
+            client = genai.Client(api_key=api_key)
+
+            response = client.models.generate_content(
+                model=model,
+                contents="Reply with OK."
+            )
+
+        elif llm_provider == "CLAUDE":
+            client = Anthropic(api_key=api_key)
+
+            response = client.messages.create(
+                model=model,
+                max_tokens=10,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "Reply with OK."
+                    }
+                ]
+            )
+
+        return {
+            "status": "PASSED",
+            "provider": llm_provider,
+            "model": model,
+            "connection_id": conn_id,
+        }
+
+    except Exception as e:
+        raise AirflowSkipException(
+            f"LLM connection test failed for "
+            f"{llm_provider}: {e}"
+        )
+
+def _calling_LLM(llm_provider, **context):
 
     ti = context["ti"]
 
@@ -315,43 +378,47 @@ def _calling_LLM(LLM_provider, **context):
         task_ids="system_prompt"
     )
 
-    API_KEY = _LLM_selector(LLM_provider)
+    conn_id = _LLM_selector(llm_provider)
 
-    if LLM_provider == "OPENAI":
+    conn = BaseHook.get_connection(conn_id)
+    api_key = conn.password
 
-        from openai import OpenAI
+    if not api_key:
+        raise AirflowException(
+            f"API key not found in connection: {conn_id}"
+        )
 
-        client = OpenAI(api_key=API_KEY)
+    model = DEFAULT_MODELS[llm_provider]
+
+    if llm_provider == "OPENAI":
+
+        client = OpenAI(api_key=api_key)
 
         response = client.responses.create(
-            model="gpt-5",
+            model=model,
             instructions=system_prompt,
             input="Generate the dbt YAML."
         )
 
         result = response.output_text
 
-    elif LLM_provider == "GEMINI":
+    elif llm_provider == "GEMINI":
 
-        from google import genai
-
-        client = genai.Client(api_key=API_KEY)
+        client = genai.Client(api_key=api_key)
 
         response = client.models.generate_content(
-            model="gemini-3.8-flash",
+            model=model,
             contents=system_prompt
         )
 
         result = response.text
 
-    elif LLM_provider == "CLAUDE":
+    elif llm_provider == "CLAUDE":
 
-        from anthropic import Anthropic
-
-        client = Anthropic(api_key=API_KEY)
+        client = Anthropic(api_key=api_key)
 
         response = client.messages.create(
-            model="claude-opus-5",
+            model=model,
             max_tokens=8192,
             system=system_prompt,
             messages=[
@@ -365,8 +432,8 @@ def _calling_LLM(LLM_provider, **context):
         result = response.content[0].text
 
     else:
-        raise ValueError(
-            f"Unsupported LLM provider: {LLM_provider}"
+        raise AirflowSkipException(
+            f"Unsupported LLM provider: {llm_provider}"
         )
 
     return result
@@ -452,6 +519,7 @@ def _dbt_test_verification(**context):
     return result
 
 def _generate_report(**context):
+
     ti = context["ti"]
 
     # Get XCom results
@@ -469,6 +537,10 @@ def _generate_report(**context):
 
     system_prompt_result = ti.xcom_pull(
         task_ids="system_prompt"
+    )
+
+    llm_connection_test = ti.xcom_pull(
+        task_ids="llm_connection_test"
     )
 
     tests_before = ti.xcom_pull(
@@ -489,6 +561,7 @@ def _generate_report(**context):
         "sample_data_extraction",
         "data_masking",
         "system_prompt",
+        "llm_connection_test",
         "calling_LLM",
         "capture_tests_before",
         "write_to_yaml",
@@ -499,11 +572,15 @@ def _generate_report(**context):
 
     task_status = {}
 
+    dag_run = ti.get_dagrun()
+
     for task_id in task_ids:
-        task_instance = ti.get_dagrun().get_task_instance(task_id)
+        task_instance = dag_run.get_task_instance(task_id)
 
         task_status[task_id] = (
-            task_instance.state if task_instance else "UNKNOWN"
+            task_instance.state
+            if task_instance
+            else "UNKNOWN"
         )
 
     report = {
@@ -518,18 +595,26 @@ def _generate_report(**context):
                     )
                     for x in information_schema
                 )
-            ),
-            "columns": len(information_schema),
+            )
+            if information_schema
+            else 0,
+            "columns": len(information_schema)
+            if information_schema
+            else 0,
         },
 
         "sample_data_extraction": {
             "status": task_status["sample_data_extraction"],
-            "records": len(sample_data),
+            "records": len(sample_data)
+            if sample_data
+            else 0,
         },
 
         "data_masking": {
             "status": task_status["data_masking"],
-            "masked_records": len(masked_data),
+            "records": len(masked_data)
+            if masked_data
+            else 0,
         },
 
         "system_prompt": {
@@ -537,15 +622,37 @@ def _generate_report(**context):
             "generated": system_prompt_result is not None,
         },
 
+        "llm_connection_test": {
+            "status": task_status["llm_connection_test"],
+            "provider": (
+                llm_connection_test.get("provider")
+                if llm_connection_test
+                else DEFAULT_LLM_PROVIDER
+            ),
+            "model": (
+                llm_connection_test.get("model")
+                if llm_connection_test
+                else DEFAULT_MODELS.get(DEFAULT_LLM_PROVIDER)
+            ),
+            "connection_id": (
+                llm_connection_test.get("connection_id")
+                if llm_connection_test
+                else None
+            ),
+        },
+
         "calling_LLM": {
             "status": task_status["calling_LLM"],
-            "provider": LLM_provider,
+            "provider": DEFAULT_LLM_PROVIDER,
+            "model": DEFAULT_MODELS.get(DEFAULT_LLM_PROVIDER),
         },
 
         "capture_tests_before": {
             "status": task_status["capture_tests_before"],
-            "total_tests": len(tests_before),
-            "tests": tests_before,
+            "total_tests": len(tests_before)
+            if tests_before
+            else 0,
+            "tests": tests_before or [],
         },
 
         "write_to_yaml": {
@@ -554,11 +661,19 @@ def _generate_report(**context):
 
         "capture_tests_after": {
             "status": task_status["capture_tests_after"],
-            "total_tests": len(tests_after),
-            "tests": tests_after,
+            "total_tests": len(tests_after)
+            if tests_after
+            else 0,
+            "tests": tests_after or [],
         },
 
-        "dbt_test_verification": verification,
+        "dbt_test_verification": (
+            verification
+            if verification
+            else {
+                "status": task_status["dbt_test_verification"],
+            }
+        ),
 
         "dbt_test": {
             "status": task_status["dbt_test"],
@@ -612,6 +727,15 @@ with DAG(
         python_callable=_system_prompt,
         op_kwargs={
             "path_to_yaml": "00-bootcamp-project/dbt/greenery/models/staging/greenery/_models.yml",
+        },
+    )
+
+    llm_connection_test = PythonOperator(
+        task_id="llm_connection_test",
+        python_callable=_llm_connection_test,
+        op_kwargs={
+            "llm_provider": DEFAULT_LLM_PROVIDER,
+            "model": DEFAULT_MODELS[DEFAULT_LLM_PROVIDER],
         },
     )
 
@@ -672,6 +796,7 @@ with DAG(
     >> [information_schema_extraction, sample_data_extraction]
     >> data_masking
     >> system_prompt
+    >> llm_connection_test
     >> calling_LLM
     >> capture_tests_before
     >> write_schema

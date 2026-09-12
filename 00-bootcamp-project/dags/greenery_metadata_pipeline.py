@@ -298,9 +298,11 @@ def _system_prompt(
         Therefore, all reasoning must be based only on:
 
         - database schema
+        - table/model names
         - column names
         - data types
         - column descriptions
+        - column metadata
         - relationships that can be reasonably inferred from the schema
         - masked sample data
         - existing dbt schema and tests
@@ -329,44 +331,239 @@ def _system_prompt(
         Prefer fewer well-justified tests over many speculative tests.
 
 
+        GOLDEN RULE — EXISTING NAMES ARE IMMUTABLE:
+
+        Existing model names and column names are part of the schema contract.
+
+        This rule applies regardless of the value of `maintain_original_schema`.
+
+        You MUST preserve exactly:
+
+        - Every existing model name.
+        - Every existing column name.
+        - Existing capitalization.
+        - Existing prefixes and suffixes.
+        - Existing underscores.
+        - Existing naming conventions.
+        - Existing names such as `*_GUID`.
+
+        You MUST NOT:
+
+        - Rename an existing model.
+        - Rename an existing column.
+        - Remove an existing model.
+        - Remove an existing column.
+        - Change capitalization.
+        - Change prefixes or suffixes.
+        - Normalize or reformat existing names.
+        - Replace an existing name with a semantically equivalent name.
+        - Change a `*_GUID` column to a `*_ID`.
+        - Change a `*_GUID` column to `*_GUID` with different capitalization.
+        - Convert an existing naming convention to another naming convention.
+
+        For example, if the existing column is:
+
+            USER_GUID
+
+        the generated YAML MUST contain exactly:
+
+            USER_GUID
+
+        It MUST NOT become:
+
+            USER_ID
+            user_guid
+            user_id
+            User_Guid
+
+        The exact original name is mandatory.
+
+        This is a non-negotiable rule and takes precedence over schema
+        interpretation, naming conventions, LLM recommendations, and schema
+        enhancements.
+
+        Changing an existing model or column name can break downstream dbt
+        models, tests, unit tests, SQL references, relationships, and other
+        dependencies.
+
+
+        DESCRIPTION RULES — DESCRIPTIONS ARE ALWAYS EDITABLE:
+
+        Descriptions are NOT part of the immutable structural schema.
+
+        Existing descriptions may always be:
+
+        - added
+        - updated
+        - improved
+        - corrected
+        - rewritten
+        - removed when appropriate
+
+        This rule applies regardless of the value of `maintain_original_schema`.
+
+        Changing a description MUST NOT be considered a schema-preservation
+        violation.
+
+        If an existing column does not have a description, you SHOULD infer
+        an appropriate description when sufficient evidence is available.
+
+        When creating or improving a description, use ALL available evidence,
+        including:
+
+        - table/model name
+        - column name
+        - data type
+        - existing description, if available
+        - column metadata
+        - relationships between columns or models
+        - masked sample data
+        - existing dbt schema context
+        - other relevant information provided in the input
+
+        Do NOT rely only on the column name when other useful evidence is
+        available.
+
+        For example, if the available information contains:
+
+            model: users
+            column: USER_GUID
+            data_type: STRING
+
+        you may infer a description such as:
+
+            "Unique identifier associated with a user."
+
+        However, do NOT claim that a column is a primary key, guaranteed
+        unique, globally unique, or has another specific business meaning
+        unless the available evidence supports that conclusion.
+
+        If an existing description is present, you MAY improve or correct it
+        when additional reliable evidence supports a more accurate description.
+
+        If a description is missing, infer the most accurate useful description
+        possible from ALL available evidence.
+
+        Do NOT leave a description empty merely because the original YAML did
+        not contain one when sufficient evidence exists.
+
+        If there is insufficient evidence to determine a meaningful
+        description, do NOT invent unsupported business meaning.
+
+        For example, if an existing column is:
+
+            USER_GUID
+
+        and its existing description is:
+
+            "User identifier"
+
+        it is allowed to improve the description to:
+
+            "Unique identifier associated with a user."
+
+        However, the column name MUST remain exactly:
+
+            USER_GUID
+
+        Description changes must NEVER modify the model name or column name.
+
+
         SCHEMA REQUIREMENTS:
 
         The provided YAML is the existing schema source of truth.
+
+        Existing models and columns must always be preserved.
+
+        IMPORTANT:
+
+        There is a strict distinction between structural schema and descriptions.
+
+        Structural schema includes:
+
+        - model names
+        - column names
+        - model existence
+        - column existence
+
+        Structural schema is immutable.
+
+        Descriptions are always editable regardless of the
+        `maintain_original_schema` flag.
+
 
         If `maintain_original_schema` is True:
 
         - Preserve every existing model from the provided YAML.
         - Preserve every existing column from the provided YAML.
+        - Preserve all existing model and column names exactly.
         - Do NOT remove any existing model.
         - Do NOT remove any existing column.
         - Do NOT rename any existing model.
         - Do NOT rename any existing column.
-        - Do NOT replace the existing schema with only the models or columns
-          that you consider relevant.
-        - The generated YAML must contain at least every model and column
-          that exists in the provided YAML.
-        - Existing descriptions should be preserved.
-        - You may add models or columns only when they are supported by the
-          extracted database schema.
+        - Do NOT add new models.
+        - Do NOT add new columns.
+        - Preserve existing schema structure.
+        - Descriptions MAY be added, updated, improved, corrected, or removed
+          when justified by ALL available evidence.
+        - If a description is missing, infer an appropriate description when
+          sufficient evidence exists.
+        - Description changes are ALWAYS allowed.
+        - Description changes are NOT considered structural schema changes.
+        - Do NOT add schema enhancements such as policy tags or new
+          classifications.
         - Do NOT invent models.
         - Do NOT invent columns.
         - Do NOT invent data values.
 
+
         If `maintain_original_schema` is False:
 
-        - The schema may be modified when justified by the extracted database
-          schema.
-        - Do NOT invent models.
-        - Do NOT invent columns.
-        - The generated YAML must still accurately represent the extracted
-          database schema.
+        - Preserve every existing model.
+        - Preserve every existing column.
+        - Preserve every existing model name exactly.
+        - Preserve every existing column name exactly.
+        - Do NOT remove existing models or columns.
+        - Do NOT rename existing models or columns.
+        - Descriptions MAY be added, updated, improved, corrected, or removed
+          when justified by ALL available evidence.
+        - If a description is missing, infer an appropriate description when
+          sufficient evidence exists.
+        - You MAY enhance the existing schema when justified by the available
+          information.
+        - You MAY add appropriate schema metadata such as:
+            - policy tags
+            - PII classifications
+            - sensitive-data classifications
+            - column descriptions
+            - other supported dbt schema metadata
+        - Any schema enhancement must be based on available evidence.
+        - Do NOT invent metadata without sufficient evidence.
+        - Schema enhancement must NEVER modify an existing model or column name.
+
+        IMPORTANT:
+
+        `maintain_original_schema=False` does NOT give permission to rename
+        or remove existing models or columns.
+
+        Existing model names and column names remain immutable regardless of
+        this flag.
+
+        The maintain flag controls schema enrichment, NOT structural
+        name preservation.
+
 
         In all cases:
 
         - Include a `name` for every model.
         - Include a `name` for every column.
-        - Include descriptions only when they can reasonably be determined
-          from the provided schema or metadata.
+        - Preserve the exact original model and column names.
+        - Descriptions may be changed regardless of the maintain flag.
+        - If a description is missing, infer one using ALL available evidence
+          when sufficient evidence exists.
+        - Do NOT leave a description empty merely because the original YAML
+          did not contain one when sufficient evidence exists.
+        - Do NOT invent unsupported business meaning.
         - Preserve the dbt `version: 2` structure.
         - Each model must be under `models:`.
         - Each column must be under its corresponding model's `columns:`.
@@ -419,6 +616,8 @@ def _system_prompt(
         - A column named `status` does not automatically prove which values
           are valid.
         - A column ending in `_id` does not automatically prove a relationship.
+        - A column ending in `_GUID` does not automatically prove that it is
+          unique.
         - A numeric column does not automatically require a non-negative test.
         - A timestamp column does not automatically require a specific range.
         - Sample values alone should not be treated as proof of a business rule.
@@ -485,14 +684,27 @@ def _system_prompt(
         REQUIREMENTS FOR THE `yaml` FIELD:
 
         - Return the complete valid dbt YAML content.
-        - If `maintain_original_schema` is True, the YAML must contain every
-          existing model and every existing column from the provided YAML.
-        - The generated YAML must NOT be a subset of the existing YAML.
+        - Preserve every existing model.
+        - Preserve every existing column.
+        - Preserve every existing model name exactly.
+        - Preserve every existing column name exactly.
+        - The generated YAML must NOT be a subset of the existing schema.
         - Do NOT remove or rename existing models.
         - Do NOT remove or rename existing columns.
-        - Preserve existing descriptions.
+        - Do NOT modify existing names for any reason.
+        - Descriptions MAY be added, updated, improved, corrected, or removed
+          regardless of `maintain_original_schema`.
+        - If a description is missing, infer one using ALL available evidence
+          when sufficient evidence exists.
+        - Description changes are NOT considered structural schema changes.
+        - Description generation must NEVER change an existing model or column
+          name.
         - Preserve all existing tests according to the
           `maintain_original_test` rules.
+        - If `maintain_original_schema` is True, do not add schema metadata
+          other than description changes.
+        - If `maintain_original_schema` is False, schema metadata may be added
+          when justified by available evidence.
         - Add new tests only when justified.
         - Do not include Markdown code fences.
         - Do not include explanatory text outside the JSON response.
@@ -518,14 +730,35 @@ def _system_prompt(
         identifying useful, evidence-based opportunities for improving data
         quality.
 
-        When `maintain_original_schema` is True, the existing schema is the
-        baseline and MUST NOT be reduced, removed, or replaced.
+        Existing model names and column names are immutable regardless of
+        `maintain_original_schema`.
 
-        When `maintain_original_test` is True, the existing tests are the
-        baseline and MUST NOT be removed, modified, or replaced.
+        Descriptions are always editable when supported by available evidence,
+        regardless of `maintain_original_schema`.
 
-        If the available evidence does not justify a new test, do not add one.
-    """
+        If a description is missing, use ALL available evidence to infer the
+        most accurate useful description possible.
+
+        Do not invent unsupported business meaning.
+
+        `maintain_original_schema=True` prevents structural additions and
+        schema metadata enhancements, but does NOT prevent description changes.
+
+        `maintain_original_schema=False` allows justified schema enrichment,
+        but does NOT allow renaming or removing existing models or columns.
+
+        `maintain_original_test=True` prevents adding new tests to the YAML,
+        while existing tests must remain exactly unchanged.
+
+        `maintain_original_test=False` allows additional independently
+        justified tests, while existing tests must still be preserved.
+
+        Existing schema names and existing tests must never be removed or
+        renamed.
+
+        If the available evidence does not justify a new test or schema
+        enhancement, do not add it.
+        """
 
     return system_prompt
 
@@ -825,10 +1058,7 @@ def _dbt_schema_verification(
             "No schema captured after YAML generation."
         )
 
-    # -------------------------
-    # Models
-    # -------------------------
-
+    # Exact model-name comparison
     before_models = {
         item["model"]
         for item in before_schema
@@ -842,35 +1072,22 @@ def _dbt_schema_verification(
     removed_models = before_models - after_models
     added_models = after_models - before_models
 
-    # -------------------------
-    # Columns
-    # -------------------------
-
+    # Exact model + column-name comparison
     before_columns = {
-        (
-            item["model"],
-            item["column"],
-        )
+        (item["model"], item["column"])
         for item in before_schema
     }
 
     after_columns = {
-        (
-            item["model"],
-            item["column"],
-        )
+        (item["model"], item["column"])
         for item in after_schema
     }
 
     removed_columns = before_columns - after_columns
     added_columns = after_columns - before_columns
 
-    # -------------------------
-    # Verification
-    # -------------------------
-
+    # Changes are NOT allowed when maintain=True
     if maintain_original_schema:
-
         if removed_models:
             raise AirflowException(
                 "Existing dbt models were removed while "
@@ -885,21 +1102,17 @@ def _dbt_schema_verification(
                 f"Removed columns: {sorted(removed_columns)}"
             )
 
-    # -------------------------
-    # Result
-    # -------------------------
-
-    result = {
+    # maintain=False = changes are allowed,
+    # but verification still reports what changed.
+    return {
         "status": "PASSED",
         "maintain_original_schema": maintain_original_schema,
-
         "models": {
             "before": len(before_models),
             "after": len(after_models),
             "removed": sorted(removed_models),
             "added": sorted(added_models),
         },
-
         "columns": {
             "before": len(before_columns),
             "after": len(after_columns),
@@ -908,23 +1121,10 @@ def _dbt_schema_verification(
         },
     }
 
-    # If schema changes are allowed, make removals visible
-    # without failing the task.
-    if not maintain_original_schema:
-        if removed_models or removed_columns:
-            result["status"] = "PASSED_WITH_WARNING"
-            result["warning"] = (
-                "Existing dbt schema elements were removed while "
-                "maintain_original_schema=False."
-            )
-
-    return result
-
 def _dbt_test_verification(
     maintain_original_test,
     **context
 ):
-
     ti = context["ti"]
 
     before_tests = ti.xcom_pull(
@@ -935,65 +1135,61 @@ def _dbt_test_verification(
         task_ids="capture_tests_after"
     )
 
-    before_tests = set(
+    if before_tests is None:
+        raise AirflowException(
+            "No tests captured before YAML generation."
+        )
+
+    if after_tests is None:
+        raise AirflowException(
+            "No tests captured after YAML generation."
+        )
+
+    before_tests = {
         (
             item["model"],
             item["column"],
             str(item["test"]),
         )
         for item in before_tests
-    )
+    }
 
-    after_tests = set(
+    after_tests = {
         (
             item["model"],
             item["column"],
             str(item["test"]),
         )
         for item in after_tests
-    )
+    }
 
     removed_tests = before_tests - after_tests
     added_tests = after_tests - before_tests
 
-    # Existing tests must always be preserved
-    if removed_tests:
-        if maintain_original_test:
+    # Only enforce preservation when maintain_original_test=True
+    if maintain_original_test:
+        if removed_tests:
             raise AirflowException(
-                f"Original DBT tests were removed while "
-                f"maintain_original_test=True.\n"
-                f"Removed tests: {removed_tests}"
-            )
-        else:
-            raise AirflowException(
-                f"Original DBT tests were removed.\n"
-                f"Existing tests must always be preserved.\n"
-                f"Removed tests: {removed_tests}"
+                "Original DBT tests were removed while "
+                "maintain_original_test=True.\n"
+                f"Removed tests: {sorted(removed_tests)}"
             )
 
-    # New tests depend on the flag
-    if added_tests and maintain_original_test:
-        raise AirflowException(
-            f"New DBT tests were added while "
-            f"maintain_original_test=True.\n"
-            f"Added tests: {added_tests}"
-        )
+        if added_tests:
+            raise AirflowException(
+                "New DBT tests were added while "
+                "maintain_original_test=True.\n"
+                f"Added tests: {sorted(added_tests)}"
+            )
 
-    result = {
+    # maintain=False:
+    # still verify and report changes, but do not fail.
+    return {
         "status": "PASSED",
         "maintain_original_test": maintain_original_test,
-        "removed_tests": list(removed_tests),
-        "added_tests": list(added_tests),
+        "removed_tests": sorted(removed_tests),
+        "added_tests": sorted(added_tests),
     }
-
-    if added_tests and not maintain_original_test:
-        result["status"] = "PASSED_WITH_WARNING"
-        result["warning"] = (
-            "New DBT tests were added. "
-            "Original tests were preserved."
-        )
-
-    return result
 
 def _generate_report(**context):
 

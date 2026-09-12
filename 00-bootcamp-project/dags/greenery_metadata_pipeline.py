@@ -1052,8 +1052,8 @@ with DAG(
         python_callable=_capture_tests,
         op_kwargs={
             # IMPORTANT: need to declare how to write the result to ensure, no schema duplicate
-            "path_to_save_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
-            # "path_to_save_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_{TABLE_ID}_schema.yml",
+            "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
+            # "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_{TABLE_ID}_schema.yml",
         },
     )
 

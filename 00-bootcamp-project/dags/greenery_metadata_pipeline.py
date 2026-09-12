@@ -137,7 +137,7 @@ def _extract_information_schema(
     region=REGION_ID,
 ):
     hook = BigQueryHook(
-        gcp_conn_id="google_cloud_default",
+        gcp_conn_id="bigquery_dbt",
         use_legacy_sql=False,
     )
 
@@ -171,7 +171,7 @@ def _extract_sample_data(
     samples=N_SAMPLE,
 ):
     hook = BigQueryHook(
-        gcp_conn_id="google_cloud_default",
+        gcp_conn_id="bigquery_dbt",
         use_legacy_sql=False,
     )
 

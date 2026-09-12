@@ -27,6 +27,7 @@ DATASET_ID = 'deb_bootcamp'
 TABLE_ID = ['addresses', 'products', 'order-items', 'promos', 'events', 'orders', 'users']
 N_SAMPLE = 100
 DEFAULT_LLM_PROVIDER = 'OPENAI'
+MAINTAIN_ORIGINAL_SCHEMA = True
 MAINTAIN_ORIGINAL_TEST = True
 PII_KEYWORDS = [
     "name",
@@ -250,6 +251,7 @@ def _data_masking(**context):
 
 def _system_prompt(
     path_to_yaml,
+    maintain_original_schema,
     maintain_original_test,
     **context
 ):
@@ -279,10 +281,13 @@ def _system_prompt(
         2. Masked sample data:
         {data_from_data_masking}
 
-        3. Existing dbt tests and YAML structure:
+        3. Existing dbt schema YAML and tests:
         {expected_sample_model_schema}
 
-        4. Maintain original dbt tests:
+        4. Maintain original dbt schema:
+        {maintain_original_schema}
+
+        5. Maintain original dbt tests:
         {maintain_original_test}
 
 
@@ -298,7 +303,7 @@ def _system_prompt(
         - column descriptions
         - relationships that can be reasonably inferred from the schema
         - masked sample data
-        - existing dbt tests
+        - existing dbt schema and tests
 
         Do not attempt to reconstruct, guess, or expose the original values of
         masked sensitive data.
@@ -316,29 +321,52 @@ def _system_prompt(
         Do NOT assume that every test in the provided YAML should be added
         to other columns or models.
 
-        Do NOT add a test merely because it appears in the example.
+        Do NOT add a test merely because it appears in the existing YAML.
 
         For every new test, determine whether there is sufficient evidence
         from the provided information to justify it.
-
-        If there is insufficient evidence, do not add the test.
 
         Prefer fewer well-justified tests over many speculative tests.
 
 
         SCHEMA REQUIREMENTS:
 
-        - Do NOT skip any model.
-        - Do NOT skip any column.
-        - Do NOT remove columns.
-        - Preserve every model and column from the provided database schema.
+        The provided YAML is the existing schema source of truth.
+
+        If `maintain_original_schema` is True:
+
+        - Preserve every existing model from the provided YAML.
+        - Preserve every existing column from the provided YAML.
+        - Do NOT remove any existing model.
+        - Do NOT remove any existing column.
+        - Do NOT rename any existing model.
+        - Do NOT rename any existing column.
+        - Do NOT replace the existing schema with only the models or columns
+          that you consider relevant.
+        - The generated YAML must contain at least every model and column
+          that exists in the provided YAML.
+        - Existing descriptions should be preserved.
+        - You may add models or columns only when they are supported by the
+          extracted database schema.
         - Do NOT invent models.
         - Do NOT invent columns.
         - Do NOT invent data values.
+
+        If `maintain_original_schema` is False:
+
+        - The schema may be modified when justified by the extracted database
+          schema.
+        - Do NOT invent models.
+        - Do NOT invent columns.
+        - The generated YAML must still accurately represent the extracted
+          database schema.
+
+        In all cases:
+
         - Include a `name` for every model.
         - Include a `name` for every column.
-        - Include descriptions only when they can reasonably be determined from
-          the provided schema or metadata.
+        - Include descriptions only when they can reasonably be determined
+          from the provided schema or metadata.
         - Preserve the dbt `version: 2` structure.
         - Each model must be under `models:`.
         - Each column must be under its corresponding model's `columns:`.
@@ -366,7 +394,8 @@ def _system_prompt(
         - Do NOT modify existing tests unnecessarily.
         - You MAY add new tests when they are independently justified by the
           provided schema, metadata, or masked sample data.
-        - New tests must be additional tests, not replacements for existing tests.
+        - New tests must be additional tests, not replacements for existing
+          tests.
         - You MAY recommend additional tests that are not added to the YAML.
 
 
@@ -456,12 +485,17 @@ def _system_prompt(
         REQUIREMENTS FOR THE `yaml` FIELD:
 
         - Return the complete valid dbt YAML content.
-        - Preserve all provided models.
-        - Preserve all provided columns.
-        - Preserve all existing tests according to the rules above.
+        - If `maintain_original_schema` is True, the YAML must contain every
+          existing model and every existing column from the provided YAML.
+        - The generated YAML must NOT be a subset of the existing YAML.
+        - Do NOT remove or rename existing models.
+        - Do NOT remove or rename existing columns.
+        - Preserve existing descriptions.
+        - Preserve all existing tests according to the
+          `maintain_original_test` rules.
         - Add new tests only when justified.
         - Do not include Markdown code fences.
-        - Do not include explanatory text outside the YAML content.
+        - Do not include explanatory text outside the JSON response.
 
 
         REQUIREMENTS FOR `recommendations`:
@@ -483,6 +517,12 @@ def _system_prompt(
         The goal is to produce a valid dbt YAML file while independently
         identifying useful, evidence-based opportunities for improving data
         quality.
+
+        When `maintain_original_schema` is True, the existing schema is the
+        baseline and MUST NOT be reduced, removed, or replaced.
+
+        When `maintain_original_test` is True, the existing tests are the
+        baseline and MUST NOT be removed, modified, or replaced.
 
         If the available evidence does not justify a new test, do not add one.
     """
@@ -761,7 +801,10 @@ def _capture_schema(path_to_yaml):
 
     return schema
 
-def _dbt_schema_verification(**context):
+def _dbt_schema_verification(
+    maintain_original_schema,
+    **context
+):
     ti = context["ti"]
 
     before_schema = ti.xcom_pull(
@@ -826,20 +869,29 @@ def _dbt_schema_verification(**context):
     # Verification
     # -------------------------
 
-    if removed_models:
-        raise AirflowException(
-            "Existing dbt models were removed.\n"
-            f"Removed models: {sorted(removed_models)}"
-        )
+    if maintain_original_schema:
 
-    if removed_columns:
-        raise AirflowException(
-            "Existing dbt columns were removed.\n"
-            f"Removed columns: {sorted(removed_columns)}"
-        )
+        if removed_models:
+            raise AirflowException(
+                "Existing dbt models were removed while "
+                "maintain_original_schema=True.\n"
+                f"Removed models: {sorted(removed_models)}"
+            )
 
-    return {
+        if removed_columns:
+            raise AirflowException(
+                "Existing dbt columns were removed while "
+                "maintain_original_schema=True.\n"
+                f"Removed columns: {sorted(removed_columns)}"
+            )
+
+    # -------------------------
+    # Result
+    # -------------------------
+
+    result = {
         "status": "PASSED",
+        "maintain_original_schema": maintain_original_schema,
 
         "models": {
             "before": len(before_models),
@@ -855,6 +907,18 @@ def _dbt_schema_verification(**context):
             "added": sorted(added_columns),
         },
     }
+
+    # If schema changes are allowed, make removals visible
+    # without failing the task.
+    if not maintain_original_schema:
+        if removed_models or removed_columns:
+            result["status"] = "PASSED_WITH_WARNING"
+            result["warning"] = (
+                "Existing dbt schema elements were removed while "
+                "maintain_original_schema=False."
+            )
+
+    return result
 
 def _dbt_test_verification(
     maintain_original_test,
@@ -1383,6 +1447,7 @@ with DAG(
         python_callable=_system_prompt,
         op_kwargs={
             "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
+            "maintain_original_schema": MAINTAIN_ORIGINAL_SCHEMA,
             "maintain_original_test": MAINTAIN_ORIGINAL_TEST,
         },
     )
@@ -1451,6 +1516,9 @@ with DAG(
     dbt_schema_verification = PythonOperator(
         task_id="dbt_schema_verification",
         python_callable=_dbt_schema_verification,
+        op_kwargs={
+            "maintain_original_schema": MAINTAIN_ORIGINAL_SCHEMA,
+        },
     )
 
     dbt_test_verification = PythonOperator(

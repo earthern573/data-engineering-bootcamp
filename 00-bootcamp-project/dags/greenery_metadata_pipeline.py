@@ -24,7 +24,7 @@ from cosmos.profiles import GoogleCloudServiceAccountDictProfileMapping
 PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
 REGION_ID = "asia-southeast1"
 DATASET_ID = 'deb_bootcamp'
-TABLE_ID = ['$table']
+TABLE_ID = ['addresses', 'products', 'order-items', 'promos', 'events', 'orders', 'users']
 N_SAMPLE = 100
 DEFAULT_LLM_PROVIDER = 'OPENAI'
 MAINTAIN_ORIGINAL_TEST = True
@@ -144,12 +144,12 @@ def _extract_information_schema(
 
     sql = f"""
         SELECT
-            c.table_catalog AS project_id
-            , c.table_schema AS dataset_id
-            , c.table_name AS table_id
-            , c.column_name
-            , c.data_type
-            , p.description
+            c.table_catalog AS project_id,
+            c.table_schema AS dataset_id,
+            c.table_name AS table_id,
+            c.column_name,
+            c.data_type,
+            p.description
         FROM
             `{project_id}.{dataset_id}.INFORMATION_SCHEMA.COLUMNS` AS c
         LEFT JOIN
@@ -163,7 +163,19 @@ def _extract_information_schema(
 
     records = hook.get_records(sql)
 
-    return records
+    columns = [
+        "project_id",
+        "dataset_id",
+        "table_id",
+        "column_name",
+        "data_type",
+        "description",
+    ]
+
+    return [
+        dict(zip(columns, row))
+        for row in records
+    ]
 
 def _extract_sample_data(
     project_id=PROJECT_ID,
@@ -949,7 +961,7 @@ with DAG(
         op_kwargs={
             "project_id": PROJECT_ID,
             "dataset_id": DATASET_ID,
-            "table_id": TABLE_ID,
+            "table_id": TABLE_ID[0],
             "samples": N_SAMPLE,
         },
     )

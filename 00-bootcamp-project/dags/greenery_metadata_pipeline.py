@@ -113,7 +113,7 @@ MASKING_POLICY = {
     "HEALTH_MASKING": HEALTH_KEYWORDS,
 }
 DEFAULT_MODELS = {
-    "OPENAI": "gpt-5-mini",
+    "OPENAI": "gpt-5.4-mini",
     "GEMINI": "gemini-3.8-flash",
     "CLAUDE": "claude-sonnet-5",
 }
@@ -268,8 +268,8 @@ def _system_prompt(
         expected_sample_model_schema = f.read()
 
     system_prompt = f"""
-        You are a data engineering assistant responsible for generating
-        a dbt schema YAML file and providing data quality test recommendations.
+        You are a data engineering assistant responsible for generating a dbt
+        schema YAML file and providing data quality test recommendations.
 
         You are given:
 
@@ -279,98 +279,160 @@ def _system_prompt(
         2. Masked sample data:
         {data_from_data_masking}
 
-        3. The expected dbt YAML schema:
+        3. Existing dbt tests and YAML structure:
         {expected_sample_model_schema}
 
         4. Maintain original dbt tests:
         {maintain_original_test}
 
+
         IMPORTANT CONTEXT:
 
         The sample data has been masked to protect sensitive information.
-        Therefore, recommendations must be based only on the available
-        database schema, column metadata, column descriptions, and masked
-        sample data.
 
-        Do not attempt to reconstruct, infer, or expose the original values
-        of masked sensitive data.
+        Therefore, all reasoning must be based only on:
 
-        STRICT REQUIREMENTS:
+        - database schema
+        - column names
+        - data types
+        - column descriptions
+        - relationships that can be reasonably inferred from the schema
+        - masked sample data
+        - existing dbt tests
 
-        - Generate the final output following the expected dbt YAML schema exactly.
+        Do not attempt to reconstruct, guess, or expose the original values of
+        masked sensitive data.
+
+        Do not treat the provided YAML structure or existing tests as proof that
+        additional tests are appropriate.
+
+
+        INDEPENDENT REASONING REQUIREMENT:
+
+        You must independently analyze the provided schema and sample data.
+
+        Do NOT simply copy tests from the provided YAML.
+
+        Do NOT assume that every test in the provided YAML should be added
+        to other columns or models.
+
+        Do NOT add a test merely because it appears in the example.
+
+        For every new test, determine whether there is sufficient evidence
+        from the provided information to justify it.
+
+        If there is insufficient evidence, do not add the test.
+
+        Prefer fewer well-justified tests over many speculative tests.
+
+
+        SCHEMA REQUIREMENTS:
+
         - Do NOT skip any model.
         - Do NOT skip any column.
-        - Do NOT remove columns even if the column appears unimportant.
+        - Do NOT remove columns.
         - Preserve every model and column from the provided database schema.
-        - Use the expected YAML structure as the required format.
-        - Preserve the `version: 2` structure.
+        - Do NOT invent models.
+        - Do NOT invent columns.
+        - Do NOT invent data values.
+        - Include a `name` for every model.
+        - Include a `name` for every column.
+        - Include descriptions only when they can reasonably be determined from
+          the provided schema or metadata.
+        - Preserve the dbt `version: 2` structure.
         - Each model must be under `models:`.
         - Each column must be under its corresponding model's `columns:`.
-        - Include a `name` for every model and every column.
-        - Include descriptions where they can be determined from the provided
-          schema or sample data.
-        - Do not invent columns that do not exist in the source schema.
-        - Do not invent data values.
-        - Do not expose or reconstruct masked sensitive data.
-        - Do not change masked values back to their original values.
-        - Preserve all existing dbt tests.
 
-        TEST REQUIREMENTS:
+
+        EXISTING TEST REQUIREMENTS:
+
+        The provided YAML contains existing dbt tests.
+
+        Existing tests are considered authoritative.
 
         If `maintain_original_test` is True:
 
-        - Do NOT remove any existing dbt test.
-        - Do NOT modify any existing dbt test.
-        - Do NOT add any new dbt test to the generated YAML.
-        - Keep all existing tests exactly as provided.
-        - You MAY provide recommendations for additional tests.
-        - Recommendations must NOT be added to the generated YAML.
+        - Preserve every existing test exactly.
+        - Do NOT remove existing tests.
+        - Do NOT modify existing tests.
+        - Do NOT add new tests to the YAML.
+        - You MAY recommend additional tests separately.
+        - Recommended tests must NOT be added to the YAML.
 
         If `maintain_original_test` is False:
 
-        - Do NOT remove any existing dbt test.
-        - Do NOT modify existing dbt tests unnecessarily.
-        - New dbt tests MAY be added when they can be reasonably determined
-          from the provided schema or masked sample data.
-        - New tests must not replace or remove existing tests.
-        - You MAY also provide recommendations for additional tests that
-          were not added to the YAML.
-        - Recommendations may include tests that are better implemented
-          as singular SQL tests.
+        - Preserve every existing test.
+        - Do NOT remove existing tests.
+        - Do NOT modify existing tests unnecessarily.
+        - You MAY add new tests when they are independently justified by the
+          provided schema, metadata, or masked sample data.
+        - New tests must be additional tests, not replacements for existing tests.
+        - You MAY recommend additional tests that are not added to the YAML.
+
+
+        TEST REASONING:
+
+        Consider appropriate tests such as:
+
+        - not_null
+        - unique
+        - accepted_values
+        - relationships
+        - dbt-expectations
+        - other appropriate dbt tests
+        - singular SQL tests for more complex business rules
+
+        However, do not automatically add these tests.
+
+        For example:
+
+        - A column named `id` does not automatically prove that it is unique.
+        - A column named `status` does not automatically prove which values
+          are valid.
+        - A column ending in `_id` does not automatically prove a relationship.
+        - A numeric column does not automatically require a non-negative test.
+        - A timestamp column does not automatically require a specific range.
+        - Sample values alone should not be treated as proof of a business rule.
+
+        Use the available evidence to determine whether a test is justified.
+
 
         TEST RECOMMENDATIONS:
 
-        Provide recommendations when there are reasonable opportunities
-        to improve data quality testing.
+        Provide recommendations when there are reasonable opportunities to
+        improve data quality testing.
 
-        Recommendations may include:
+        Each recommendation must explain:
 
-        - not_null tests
-        - unique tests
-        - accepted_values tests
-        - relationships tests
-        - dbt-expectations tests
-        - other appropriate dbt tests
-        - singular SQL tests for business rules or cross-column validations
-          that cannot be represented well using standard YAML tests
-
-        For singular SQL test recommendations:
-
-        - Do NOT generate or execute the SQL file.
-        - Only provide a recommendation describing what the singular test
-          should validate.
-        - Include a suggested file name when appropriate.
-        - Make clear that it is a recommendation only.
-
-        IMPORTANT:
+        1. What should be tested.
+        2. Why the test is reasonable based on the available evidence.
+        3. Whether it should be implemented as a normal dbt YAML test or
+           a singular SQL test.
 
         Recommendations are suggestions, not confirmed data-quality failures.
 
-        Because the sample data is masked and may be limited, do not claim
-        that a recommended test is definitely required unless the provided
-        information clearly supports that conclusion.
+        Do not claim that a recommended test is definitely required unless
+        the provided information clearly supports that conclusion.
 
-        OUTPUT FORMAT:
+        For singular SQL test recommendations:
+
+        - Do NOT generate the SQL file.
+        - Do NOT execute SQL.
+        - Only describe what the test should validate.
+        - `column` may be null for model-level or multi-column rules.
+        - Provide a suggested `.sql` filename when appropriate.
+
+
+        MASKED DATA:
+
+        - Do NOT expose sensitive values.
+        - Do NOT reconstruct masked values.
+        - Do NOT attempt to infer the original value of masked fields.
+        - You may reason about the existence, type, or structure of a masked
+          column when that information is available.
+
+
+        OUTPUT REQUIREMENTS:
 
         Return ONLY valid JSON.
 
@@ -390,23 +452,39 @@ def _system_prompt(
             ]
         }}
 
+
         REQUIREMENTS FOR THE `yaml` FIELD:
 
-        - The value must contain the complete valid dbt YAML content.
-        - Follow the expected YAML structure exactly.
-        - Do NOT include Markdown code fences.
+        - Return the complete valid dbt YAML content.
+        - Preserve all provided models.
+        - Preserve all provided columns.
+        - Preserve all existing tests according to the rules above.
+        - Add new tests only when justified.
+        - Do not include Markdown code fences.
+        - Do not include explanatory text outside the YAML content.
+
 
         REQUIREMENTS FOR `recommendations`:
 
         - Return an empty list if there are no useful recommendations.
-        - Do not recommend tests based on information that is unavailable.
+        - Do not recommend tests based on unavailable information.
         - Do not include sensitive or unmasked sample data.
-        - For singular tests, `column` may be null when the test involves
-          multiple columns or a model-level business rule.
-        - `suggested_path` may be null for normal dbt YAML tests.
-        - For singular tests, provide a suggested `.sql` filename when useful.
+        - Do not duplicate an existing test as a recommendation unless there is
+          a meaningful reason to reconsider it.
+        - For singular tests, `column` may be null.
+        - `suggested_path` may be null for normal YAML tests.
+        - Provide a suggested `.sql` filename for singular tests when useful.
 
-        The expected YAML structure is the template and must be followed strictly.
+
+        FINAL PRINCIPLE:
+
+        The goal is not to maximize the number of tests.
+
+        The goal is to produce a valid dbt YAML file while independently
+        identifying useful, evidence-based opportunities for improving data
+        quality.
+
+        If the available evidence does not justify a new test, do not add one.
     """
 
     return system_prompt
@@ -617,6 +695,167 @@ def _capture_tests(path_to_yaml):
 
     return tests
 
+
+    """
+    Capture dbt models and columns from the schema YAML file.
+    """
+
+    schema_path = (
+        f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml"
+    )
+
+    if not os.path.exists(schema_path):
+        raise AirflowException(
+            f"Schema file not found: {schema_path}"
+        )
+
+    with open(schema_path, "r") as f:
+        schema = yaml.safe_load(f)
+
+    captured_schema = []
+
+    for model in schema.get("models", []):
+        model_name = model.get("name")
+
+        if not model_name:
+            continue
+
+        # Capture model even if it has no columns
+        if not model.get("columns"):
+            captured_schema.append({
+                "model": model_name,
+                "column": None,
+            })
+            continue
+
+        for column in model.get("columns", []):
+            captured_schema.append({
+                "model": model_name,
+                "column": column.get("name"),
+            })
+
+    return captured_schema
+
+def _capture_schema(path_to_yaml):
+    with open(path_to_yaml, "r") as f:
+        data = yaml.safe_load(f)
+
+    schema = []
+
+    for model in data.get("models", []):
+        model_name = model.get("name")
+
+        # Capture model even if it has no columns
+        if not model.get("columns"):
+            schema.append({
+                "model": model_name,
+                "column": None,
+            })
+            continue
+
+        for column in model.get("columns", []):
+            schema.append({
+                "model": model_name,
+                "column": column.get("name"),
+            })
+
+    return schema
+
+def _dbt_schema_verification(**context):
+    ti = context["ti"]
+
+    before_schema = ti.xcom_pull(
+        task_ids="capture_schema_before"
+    )
+
+    after_schema = ti.xcom_pull(
+        task_ids="capture_schema_after"
+    )
+
+    if before_schema is None:
+        raise AirflowException(
+            "No schema captured before YAML generation."
+        )
+
+    if after_schema is None:
+        raise AirflowException(
+            "No schema captured after YAML generation."
+        )
+
+    # -------------------------
+    # Models
+    # -------------------------
+
+    before_models = {
+        item["model"]
+        for item in before_schema
+    }
+
+    after_models = {
+        item["model"]
+        for item in after_schema
+    }
+
+    removed_models = before_models - after_models
+    added_models = after_models - before_models
+
+    # -------------------------
+    # Columns
+    # -------------------------
+
+    before_columns = {
+        (
+            item["model"],
+            item["column"],
+        )
+        for item in before_schema
+    }
+
+    after_columns = {
+        (
+            item["model"],
+            item["column"],
+        )
+        for item in after_schema
+    }
+
+    removed_columns = before_columns - after_columns
+    added_columns = after_columns - before_columns
+
+    # -------------------------
+    # Verification
+    # -------------------------
+
+    if removed_models:
+        raise AirflowException(
+            "Existing dbt models were removed.\n"
+            f"Removed models: {sorted(removed_models)}"
+        )
+
+    if removed_columns:
+        raise AirflowException(
+            "Existing dbt columns were removed.\n"
+            f"Removed columns: {sorted(removed_columns)}"
+        )
+
+    return {
+        "status": "PASSED",
+
+        "models": {
+            "before": len(before_models),
+            "after": len(after_models),
+            "removed": sorted(removed_models),
+            "added": sorted(added_models),
+        },
+
+        "columns": {
+            "before": len(before_columns),
+            "after": len(after_columns),
+            "removed": sorted(removed_columns),
+            "added": sorted(added_columns),
+        },
+    }
+
 def _dbt_test_verification(
     maintain_original_test,
     **context
@@ -696,7 +935,10 @@ def _generate_report(**context):
 
     ti = context["ti"]
 
+    # ============================================================
     # Get XCom results
+    # ============================================================
+
     information_schema = ti.xcom_pull(
         task_ids="information_schema_extraction"
     )
@@ -721,6 +963,14 @@ def _generate_report(**context):
         task_ids="calling_LLM"
     )
 
+    schema_before = ti.xcom_pull(
+        task_ids="capture_schema_before"
+    )
+
+    schema_after = ti.xcom_pull(
+        task_ids="capture_schema_after"
+    )
+
     tests_before = ti.xcom_pull(
         task_ids="capture_tests_before"
     )
@@ -729,11 +979,18 @@ def _generate_report(**context):
         task_ids="capture_tests_after"
     )
 
-    verification = ti.xcom_pull(
+    schema_verification = ti.xcom_pull(
+        task_ids="dbt_schema_verification"
+    )
+
+    test_verification = ti.xcom_pull(
         task_ids="dbt_test_verification"
     )
 
+    # ============================================================
     # Get LLM recommendations
+    # ============================================================
+
     recommendations = []
 
     if calling_llm_result:
@@ -742,8 +999,12 @@ def _generate_report(**context):
             []
         )
 
-    # Determine task status from available XCom results
+    # ============================================================
+    # Determine task status from XCom results
+    # ============================================================
+
     task_status = {
+
         "information_schema_extraction": (
             "SUCCESS"
             if information_schema is not None
@@ -780,9 +1041,9 @@ def _generate_report(**context):
             else "UNKNOWN"
         ),
 
-        "capture_tests_before": (
+        "capture_schema_before": (
             "SUCCESS"
-            if tests_before is not None
+            if schema_before is not None
             else "UNKNOWN"
         ),
 
@@ -792,22 +1053,49 @@ def _generate_report(**context):
             else "UNKNOWN"
         ),
 
+        "capture_schema_after": (
+            "SUCCESS"
+            if schema_after is not None
+            else "UNKNOWN"
+        ),
+
+        "capture_tests_before": (
+            "SUCCESS"
+            if tests_before is not None
+            else "UNKNOWN"
+        ),
+
         "capture_tests_after": (
             "SUCCESS"
             if tests_after is not None
             else "UNKNOWN"
         ),
 
+        "dbt_schema_verification": (
+            schema_verification.get("status")
+            if schema_verification
+            else "UNKNOWN"
+        ),
+
         "dbt_test_verification": (
-            verification.get("status")
-            if verification
+            test_verification.get("status")
+            if test_verification
             else "UNKNOWN"
         ),
 
         "dbt_test": "UNKNOWN",
     }
 
+    # ============================================================
+    # Report
+    # ============================================================
+
     report = {
+
+        # --------------------------------------------------------
+        # Extraction
+        # --------------------------------------------------------
+
         "information_schema_extraction": {
             "status": task_status[
                 "information_schema_extraction"
@@ -846,6 +1134,10 @@ def _generate_report(**context):
             if masked_data
             else 0,
         },
+
+        # --------------------------------------------------------
+        # LLM
+        # --------------------------------------------------------
 
         "system_prompt": {
             "status": task_status[
@@ -898,6 +1190,10 @@ def _generate_report(**context):
             ),
         },
 
+        # --------------------------------------------------------
+        # Recommendations
+        # --------------------------------------------------------
+
         "test_recommendations": {
             "total": len(recommendations),
             "recommendations": recommendations,
@@ -908,14 +1204,29 @@ def _generate_report(**context):
             ),
         },
 
-        "capture_tests_before": {
+        # --------------------------------------------------------
+        # Schema capture
+        # --------------------------------------------------------
+
+        "capture_schema_before": {
             "status": task_status[
-                "capture_tests_before"
+                "capture_schema_before"
             ],
-            "total_tests": len(tests_before)
-            if tests_before
-            else 0,
-            "tests": tests_before or [],
+            "total_models": (
+                len(
+                    set(
+                        item["model"]
+                        for item in schema_before
+                    )
+                )
+                if schema_before
+                else 0
+            ),
+            "total_columns": (
+                len(schema_before)
+                if schema_before
+                else 0
+            ),
         },
 
         "write_to_yaml": {
@@ -924,23 +1235,82 @@ def _generate_report(**context):
             ],
         },
 
-        "capture_tests_after": {
+        "capture_schema_after": {
             "status": task_status[
-                "capture_tests_after"
+                "capture_schema_after"
             ],
-            "total_tests": len(tests_after)
-            if tests_after
-            else 0,
-            "tests": tests_after or [],
+            "total_models": (
+                len(
+                    set(
+                        item["model"]
+                        for item in schema_after
+                    )
+                )
+                if schema_after
+                else 0
+            ),
+            "total_columns": (
+                len(schema_after)
+                if schema_after
+                else 0
+            ),
         },
 
-        "dbt_test_verification": (
-            verification
-            if verification
+        # --------------------------------------------------------
+        # Schema verification
+        # --------------------------------------------------------
+
+        "dbt_schema_verification": (
+            schema_verification
+            if schema_verification
             else {
                 "status": "UNKNOWN",
             }
         ),
+
+        # --------------------------------------------------------
+        # Test capture
+        # --------------------------------------------------------
+
+        "capture_tests_before": {
+            "status": task_status[
+                "capture_tests_before"
+            ],
+            "total_tests": (
+                len(tests_before)
+                if tests_before
+                else 0
+            ),
+            "tests": tests_before or [],
+        },
+
+        "capture_tests_after": {
+            "status": task_status[
+                "capture_tests_after"
+            ],
+            "total_tests": (
+                len(tests_after)
+                if tests_after
+                else 0
+            ),
+            "tests": tests_after or [],
+        },
+
+        # --------------------------------------------------------
+        # Test verification
+        # --------------------------------------------------------
+
+        "dbt_test_verification": (
+            test_verification
+            if test_verification
+            else {
+                "status": "UNKNOWN",
+            }
+        ),
+
+        # --------------------------------------------------------
+        # dbt test
+        # --------------------------------------------------------
 
         "dbt_test": {
             "status": task_status[
@@ -949,8 +1319,13 @@ def _generate_report(**context):
         },
     }
 
+    # ============================================================
+    # Write report
+    # ============================================================
+
     report_path = (
-        f"{DBT_PROJECT_DIR}/models/metadata_generation_report.json"
+        f"{DBT_PROJECT_DIR}/models/"
+        "metadata_generation_report.json"
     )
 
     with open(report_path, "w") as f:
@@ -1037,6 +1412,14 @@ with DAG(
         },
     )
 
+    capture_schema_before = PythonOperator(
+        task_id="capture_schema_before",
+        python_callable=_capture_schema,
+        op_kwargs={
+            "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
+        },
+    )
+    
     write_schema = PythonOperator(
         task_id="write_schema",
         python_callable=_write_schema,
@@ -1055,6 +1438,19 @@ with DAG(
             "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
             # "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_{TABLE_ID}_schema.yml",
         },
+    )
+
+    capture_schema_after = PythonOperator(
+        task_id="capture_schema_after",
+        python_callable=_capture_schema,
+        op_kwargs={
+            "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
+        },
+    )
+
+    dbt_schema_verification = PythonOperator(
+        task_id="dbt_schema_verification",
+        python_callable=_dbt_schema_verification,
     )
 
     dbt_test_verification = PythonOperator(
@@ -1080,15 +1476,45 @@ with DAG(
     end = EmptyOperator(task_id="end", trigger_rule="one_success")
 
     # Task dependencies
+
+    # 1. Extract source information
     (
         start
         >> [information_schema_extraction, sample_data_extraction]
         >> data_masking
-        >> [system_prompt, llm_connection_test, capture_tests_before]
-        >> calling_LLM
-        >> write_schema
-        >> capture_tests_after
-        >> [dbt_test_verification, dbt_test]
-        >> generate_report
-        >> end
     )
+
+    # 2. Tasks that can run independently
+    data_masking >> [system_prompt, llm_connection_test]
+
+    # Capture original state BEFORE LLM/write
+    start >> [capture_schema_before, capture_tests_before]
+
+    # 3. LLM generation
+    [system_prompt, llm_connection_test] >> calling_LLM
+
+    # 4. Write generated YAML
+    calling_LLM >> write_schema
+
+    # 5. Capture state AFTER YAML update
+    write_schema >> [capture_schema_after, capture_tests_after]
+
+    # 6. Verification
+    [capture_schema_before, capture_schema_after] >> dbt_schema_verification
+
+    [capture_tests_before, capture_tests_after] >> dbt_test_verification
+
+    # 7. Run dbt tests after verification
+    [
+        dbt_schema_verification,
+        dbt_test_verification,
+    ] >> dbt_test
+
+    # 8. Generate final report
+    [
+        dbt_schema_verification,
+        dbt_test_verification,
+        dbt_test,
+    ] >> generate_report
+
+    generate_report >> end

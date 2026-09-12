@@ -939,7 +939,7 @@ default_args = {
 with DAG(
     dag_id=f"greenery_metadata_pipeline",
     default_args=default_args,
-    schedule="@daily",
+    schedule=None,
     catchup=False,
     tags=["Metadata", "greenery"],
 ):

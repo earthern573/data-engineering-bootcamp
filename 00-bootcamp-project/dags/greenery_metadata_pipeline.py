@@ -993,7 +993,7 @@ with DAG(
         task_id="calling_LLM",
         python_callable=_calling_LLM,
         op_kwargs={
-            "LLM_provider": DEFAULT_LLM_PROVIDER,
+            "llm_provider": DEFAULT_LLM_PROVIDER,
         },
     )
 

@@ -1001,7 +1001,7 @@ with DAG(
         task_id="capture_tests_before",
         python_callable=_capture_tests,
         op_kwargs={
-            "path_to_yaml": "00-bootcamp-project/dbt/greenery/models/staging/greenery/_models.yml",
+            "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
         },
     )
 
@@ -1009,7 +1009,9 @@ with DAG(
         task_id="write_schema",
         python_callable=_write_schema,
         op_kwargs={
-            "path_to_save_yaml": f"/workspaces/data-engineering-bootcamp/00-bootcamp-project/dbt/greenery/models/staging/greenery/_{TABLE_ID}_schema.yml",
+            # IMPORTANT: need to declare how to write the result to ensure, no schema duplicate
+            "path_to_save_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
+            # "path_to_save_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_{TABLE_ID}_schema.yml",
         },
     )
 
@@ -1017,7 +1019,9 @@ with DAG(
         task_id="capture_tests_after",
         python_callable=_capture_tests,
         op_kwargs={
-            "path_to_yaml": "base/greenery/models/staging/greenery/_models.yml",
+            # IMPORTANT: need to declare how to write the result to ensure, no schema duplicate
+            "path_to_save_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
+            # "path_to_save_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_{TABLE_ID}_schema.yml",
         },
     )
 

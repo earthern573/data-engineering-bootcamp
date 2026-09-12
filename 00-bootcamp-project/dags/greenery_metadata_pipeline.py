@@ -742,33 +742,70 @@ def _generate_report(**context):
             []
         )
 
-    # Get task states
-    task_ids = [
-        "information_schema_extraction",
-        "sample_data_extraction",
-        "data_masking",
-        "system_prompt",
-        "llm_connection_test",
-        "calling_LLM",
-        "capture_tests_before",
-        "write_to_yaml",
-        "capture_tests_after",
-        "dbt_test_verification",
-        "dbt_test",
-    ]
-
-    task_status = {}
-
-    dag_run = ti.get_dagrun()
-
-    for task_id in task_ids:
-        task_instance = dag_run.get_task_instance(task_id)
-
-        task_status[task_id] = (
-            task_instance.state
-            if task_instance
+    # Determine task status from available XCom results
+    task_status = {
+        "information_schema_extraction": (
+            "SUCCESS"
+            if information_schema is not None
             else "UNKNOWN"
-        )
+        ),
+
+        "sample_data_extraction": (
+            "SUCCESS"
+            if sample_data is not None
+            else "UNKNOWN"
+        ),
+
+        "data_masking": (
+            "SUCCESS"
+            if masked_data is not None
+            else "UNKNOWN"
+        ),
+
+        "system_prompt": (
+            "SUCCESS"
+            if system_prompt_result is not None
+            else "UNKNOWN"
+        ),
+
+        "llm_connection_test": (
+            "SUCCESS"
+            if llm_connection_test is not None
+            else "UNKNOWN"
+        ),
+
+        "calling_LLM": (
+            "SUCCESS"
+            if calling_llm_result is not None
+            else "UNKNOWN"
+        ),
+
+        "capture_tests_before": (
+            "SUCCESS"
+            if tests_before is not None
+            else "UNKNOWN"
+        ),
+
+        "write_to_yaml": (
+            "SUCCESS"
+            if calling_llm_result is not None
+            else "UNKNOWN"
+        ),
+
+        "capture_tests_after": (
+            "SUCCESS"
+            if tests_after is not None
+            else "UNKNOWN"
+        ),
+
+        "dbt_test_verification": (
+            verification.get("status")
+            if verification
+            else "UNKNOWN"
+        ),
+
+        "dbt_test": "UNKNOWN",
+    }
 
     report = {
         "information_schema_extraction": {
@@ -901,11 +938,7 @@ def _generate_report(**context):
             verification
             if verification
             else {
-                "status": (
-                    task_status[
-                        "dbt_test_verification"
-                    ]
-                ),
+                "status": "UNKNOWN",
             }
         ),
 
@@ -917,9 +950,7 @@ def _generate_report(**context):
     }
 
     report_path = (
-        "/00-bootcamp-project/"
-        "reports/greenery/"
-        "metadata_generation_report.json"
+        f"{DBT_PROJECT_DIR}/models/metadata_generation_report.json"
     )
 
     with open(report_path, "w") as f:

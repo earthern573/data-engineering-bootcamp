@@ -3,8 +3,10 @@ import json
 import yaml
 
 from google import genai
+# from google.oauth2 import service_account
+
 from openai import OpenAI
-from anthropic import Anthropic
+# from anthropic import Anthropic
 
 from airflow import DAG
 from airflow.utils import timezone
@@ -21,10 +23,7 @@ from cosmos.profiles import GoogleCloudServiceAccountDictProfileMapping
 # Required packages:
 # pip install openai google-genai anthropic
 
-with open("service-account.json") as f:
-    credentials = json.load(f)
-
-PROJECT_ID = credentials["project_id"]
+PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
 REGION_ID = "asia-southeast1"
 DATASET_ID = 'deb-earth'
 TABLE_ID = ['$table']

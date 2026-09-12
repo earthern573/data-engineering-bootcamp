@@ -120,6 +120,7 @@ DEFAULT_MODELS = {
 
 DBT_PROJECT_DIR = "/opt/airflow/dbt/greenery"
 
+# Pay Attention to profile_args.schema >> this control the output schema that send to bigquery
 profile_config = ProfileConfig(
     profile_name="greenery",
     target_name="dev",

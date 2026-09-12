@@ -680,7 +680,12 @@ def _generate_report(**context):
         },
     }
 
-    return report
+    report_path = "/00-bootcamp-project/reports/greenery/metadata_generation_report.json"
+    
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=2, default=str)
+
+    return report_path
 
 default_args = {
     "owner": "airflow",

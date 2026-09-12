@@ -975,7 +975,7 @@ with DAG(
         task_id="system_prompt",
         python_callable=_system_prompt,
         op_kwargs={
-            "path_to_yaml": "00-bootcamp-project/dbt/greenery/models/staging/greenery/_models.yml",
+            "path_to_yaml": f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml",
             "maintain_original_test": MAINTAIN_ORIGINAL_TEST,
         },
     )

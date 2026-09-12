@@ -23,7 +23,7 @@ from cosmos.profiles import GoogleCloudServiceAccountDictProfileMapping
 
 PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
 REGION_ID = "asia-southeast1"
-DATASET_ID = 'deb-earth'
+DATASET_ID = 'deb_bootcamp'
 TABLE_ID = ['$table']
 N_SAMPLE = 100
 DEFAULT_LLM_PROVIDER = 'OPENAI'
@@ -134,11 +134,12 @@ profile_config = ProfileConfig(
 
 def _extract_information_schema(
     project_id=PROJECT_ID,
-    region=REGION_ID,
+    dataset_id=DATASET_ID,
 ):
     hook = BigQueryHook(
         gcp_conn_id="bigquery_dbt",
         use_legacy_sql=False,
+        location="asia-southeast1",
     )
 
     sql = f"""
@@ -150,9 +151,9 @@ def _extract_information_schema(
             , c.data_type
             , p.description
         FROM
-            `{project_id}.{region}.INFORMATION_SCHEMA.COLUMNS` AS c
+            `{project_id}.{dataset_id}.INFORMATION_SCHEMA.COLUMNS` AS c
         LEFT JOIN
-            `{project_id}.{region}.INFORMATION_SCHEMA.COLUMN_FIELD_PATH` AS p
+            `{project_id}.{dataset_id}.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS` AS p
         ON
             c.table_catalog = p.table_catalog
             AND c.table_schema = p.table_schema

@@ -52,14 +52,16 @@ def get_embedding(client, model: str = "text-embedding-3-small", text: str = "")
 #     )
 #     return response.text
 
-def ask_openai(client, model: str = "gpt-5.4-mini", prompt: str = ""):
+def ask_openai(client, model: str = "gpt-5.6-mini", prompt: str = ""):
 
     response = client.responses.create(
         model=model,
         instructions=(
-            "You are a course recommender.\n"
-            "Your mission is to recommend courses for people who want to "
-            "upskill and switch careers."
+            "You are a data analyst who works for the Greenery company.\n"
+            "Your mission is to summarize the Greenery data and prepare "
+            "the reports for the management.\n"
+            "Greenery, a tech startup that delivers flowers and houseplants. "
+            "You are here to grow revenue and acquire new customers!"
         ),
         input=prompt,
     )
@@ -138,6 +140,9 @@ def main():
             context = " / ".join([each for each in similar_texts])
 
             prompt_with_context = f"""
+            Given the context below, find the actionable insights and 
+            answer the question. Explain like I'm 10.
+            
             Context:
             {context}
 

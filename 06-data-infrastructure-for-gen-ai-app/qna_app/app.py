@@ -8,35 +8,63 @@ from google.genai import types
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
+from dotenv import load_dotenv
+from openai import OpenAI
 
-GCP_PROJECT_ID = "YOUR_GCP_PROJECT_ID"
-DATASET_ID = "YOUR_DATASET_ID"
-TABLE_ID = "YOUR_TABLE_ID"
-KEYFILE = "YOUR_KEYFILE"
+load_dotenv()
+
+
+GCP_PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
+DATASET_ID = "deb_bootcamp"
+TABLE_ID = "courses"
+KEYFILE = "/workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json"
 # api_key = os.environ.get("GEMINI_API_KEY")
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+# GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
 
 
-def get_embedding(client, model: str = "gemini-embedding-exp-03-07", text: str = ""):
-    result = client.models.embed_content(
+# def get_embedding(client, model: str = "gemini-embedding-exp-03-07", text: str = ""):
+#     result = client.models.embed_content(
+#         model=model,
+#         contents=text,
+#     )
+#     return result.embeddings[0]
+
+def get_embedding(client, model: str = "text-embedding-3-small", text: str = ""):
+
+    result = client.embeddings.create(
         model=model,
-        contents=text,
+        input=text,
     )
-    return result.embeddings[0]
+
+    return result.data[0].embedding
 
 
-def ask_gemini(client, model: str = "gemini-2.0-flash-001", prompt: str = ""):
-    response = client.models.generate_content(
+# def ask_gemini(client, model: str = "gemini-2.0-flash-001", prompt: str = ""):
+#     response = client.models.generate_content(
+#         model=model,
+#         contents=prompt,
+#         config=types.GenerateContentConfig(
+#             system_instruction=[
+#                 "You are a course recommender.",
+#                 "Your mission is to recommend courses for people who want to upskill and switch careers."
+#             ]
+#         ),
+#     )
+#     return response.text
+
+def ask_openai(client, model: str = "gpt-5.4-mini", prompt: str = ""):
+
+    response = client.responses.create(
         model=model,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=[
-                "You are a course recommender.",
-                "Your mission is to recommend courses for people who want to upskill and switch careers."
-            ]
+        instructions=(
+            "You are a course recommender.\n"
+            "Your mission is to recommend courses for people who want to "
+            "upskill and switch careers."
         ),
+        input=prompt,
     )
-    return response.text
+
+    return response.output_text
 
 
 def search_similar_texts(client, vec):
@@ -71,6 +99,15 @@ def search_similar_texts(client, vec):
 def main():
     st.title("Q&A App")
 
+    option = st.selectbox(
+        "Which model?",
+        (
+            "gpt-4o-mini",
+            "gpt-5.4-mini",
+        ),
+    )
+    st.write("You selected:", option)
+
     user_question = st.text_input("Ask a question:")
     if user_question:
         with st.spinner("Cooking up a response... 🍳", show_time=True):
@@ -83,7 +120,8 @@ def main():
             })
 
             # Set up a Gemini client
-            genai_client = genai.Client(api_key=GEMINI_API_KEY)
+            # genai_client = genai.Client(api_key=GEMINI_API_KEY)
+            genai_client = OpenAI()
 
             # Set up a BigQuery client
             service_account_info = json.load(open(KEYFILE))
@@ -93,7 +131,7 @@ def main():
                 credentials=credentials,
             )
 
-            vec = get_embedding(genai_client, text=user_question).values
+            vec = get_embedding(genai_client, text=user_question)
             similar_texts = search_similar_texts(bigquery_client, vec)
 
             # Create context by gathering results together
@@ -106,7 +144,7 @@ def main():
             Question:
             {user_question}
             """
-            response = ask_gemini(genai_client, prompt=prompt_with_context)
+            response = ask_openai(genai_client, model=option, prompt=prompt_with_context)
 
         st.subheader("AI Assistant:")
         st.write(response)

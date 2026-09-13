@@ -9,16 +9,19 @@ from airflow.hooks.base import BaseHook
 import pandas as pd
 from google import genai
 from google.genai import types
-from google.cloud import bigquery
+from google.cloud import bigquery, storage
 from google.oauth2 import service_account
 
 from openai import OpenAI
+from io import BytesIO
 
 
 GCP_PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
 DATASET_ID = "deb_bootcamp"
 TABLE_ID = "YOUR_TABLE_ID"
+BUCKET_NAME = "deb-bootcamp-06-earth"
 KEYFILE = "/opt/airflow/dags/deb-dbt-bigquery.json"
+KEYFILE_LOAD_TO_GCS = "/opt/airflow/dags/deb-load-data-to-gcs.json"
 # GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
 DAGS_FOLDER = "/opt/airflow/dags"
 
@@ -84,9 +87,46 @@ def _gather_data(dataset_id, table_id, ds):
     })
     df.to_parquet(f"{DAGS_FOLDER}/greenery-summary-data.parquet")
 
+def _load_data_to_gcs():
+    service_account_info_gcs = json.load(open(KEYFILE_LOAD_TO_GCS))
+    credentials_gcs = service_account.Credentials.from_service_account_info(
+        service_account_info_gcs
+    )
+
+    # Load data from Local to GCS
+    bucket_name = "deb-bootcamp-06-earth"
+    storage_client = storage.Client(
+        project=GCP_PROJECT_ID,
+        credentials=credentials_gcs,
+    )
+    bucket = storage_client.bucket(bucket_name)
+
+    file_path = f"{DAGS_FOLDER}/greenery-summary-data.parquet"
+    destination_blob_name = f"summarized/greenery/context/greenery-summary-data.parquet"
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_filename(file_path)
 
 def _get_embeddings():
-    df = pd.read_parquet(f"{DAGS_FOLDER}/greenery-summary-data.parquet")
+    # df = pd.read_parquet(f"{DAGS_FOLDER}/greenery-summary-data.parquet")
+
+    service_account_info_gcs = json.load(open(KEYFILE_LOAD_TO_GCS))
+    credentials_gcs = service_account.Credentials.from_service_account_info(
+        service_account_info_gcs
+    )
+
+    client = storage.Client(
+        credentials=credentials_gcs
+    )
+
+    bucket = client.bucket(BUCKET_NAME)
+
+    blob = bucket.blob(
+        "summarized/greenery/context/greenery-summary-data.parquet"
+    )
+
+    data = blob.download_as_bytes()
+
+    df = pd.read_parquet(BytesIO(data))
 
 
     def generate_embeddings(text):
@@ -111,6 +151,25 @@ def _get_embeddings():
 
 def _load_data_to_bigquery():
     df = pd.read_parquet(f"{DAGS_FOLDER}/greenery-summary-data-with-embeddings.parquet")
+
+    # service_account_info_gcs = json.load(open(KEYFILE_LOAD_TO_GCS))
+    # credentials_gcs = service_account.Credentials.from_service_account_info(
+    #     service_account_info_gcs
+    # )
+
+    # client = storage.Client(
+    #     credentials=credentials_gcs
+    # )
+
+    # bucket = client.bucket(BUCKET_NAME)
+
+    # blob = bucket.blob(
+    #     "summarized/greenery/context/greenery-summary-data-with-embeddings.parquet"
+    # )
+
+    # data = blob.download_as_bytes()
+
+    # df = pd.read_parquet(BytesIO(data))
 
     # YOUR CODE HERE
     service_account_info = json.load(open(KEYFILE))
@@ -152,6 +211,11 @@ with DAG(
         },
     )
 
+    load_data_to_gcs = PythonOperator(
+            task_id="load_data_to_gcs",
+            python_callable=_load_data_to_gcs,
+    )
+
     get_embeddings = PythonOperator(
         task_id="get_embeddings",
         python_callable=_get_embeddings,
@@ -162,4 +226,4 @@ with DAG(
         python_callable=_load_data_to_bigquery,
     )
 
-    gather_data >> get_embeddings >> load_data_to_bigquery
+    gather_data >> load_data_to_gcs >> get_embeddings >> load_data_to_bigquery

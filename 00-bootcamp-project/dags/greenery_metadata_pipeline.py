@@ -4,7 +4,7 @@ import yaml
 
 from google import genai
 from openai import OpenAI
-# from anthropic import Anthropic
+from anthropic import Anthropic
 
 from airflow import DAG
 from airflow.utils import timezone

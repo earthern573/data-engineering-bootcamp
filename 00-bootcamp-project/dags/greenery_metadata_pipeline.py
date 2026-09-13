@@ -26,7 +26,7 @@ REGION_ID = "asia-southeast1"
 DATASET_ID = 'deb_bootcamp'
 TABLE_ID = ['addresses', 'products', 'order-items', 'promos', 'events', 'orders', 'users']
 N_SAMPLE = 100
-DEFAULT_LLM_PROVIDER = 'OPENAI'
+DEFAULT_LLM_PROVIDER = 'CLAUDE'
 MAINTAIN_ORIGINAL_SCHEMA = True
 MAINTAIN_ORIGINAL_TEST = True
 PII_KEYWORDS = [
@@ -907,13 +907,20 @@ def _calling_LLM(llm_provider, **context):
                 {
                     "role": "user",
                     "content": (
-                        "Generate the dbt YAML and test recommendations."
+                        "Generate the dbt YAML and test recommendations. "
+                        "Return ONLY valid JSON with exactly these top-level fields: "
+                        "`yaml` and `recommendations`. "
+                        "Do not use Markdown code fences or any text outside the JSON."
                     )
                 }
             ]
         )
 
-        result = response.content[0].text
+        result = next(
+            block.text
+            for block in response.content
+            if block.type == "text"
+        )
 
     else:
         raise AirflowSkipException(

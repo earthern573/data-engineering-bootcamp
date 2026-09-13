@@ -50,14 +50,16 @@ vec = get_embedding(
     # text="QR codes systems for COVID-19.\nSimple tools for bars, restaurants, offices, and other small proximity businesses."
     # text="I went to a doctor and he said I need to take a break from work and rest for a while."
     # text="Today is Sunday."
-    text="""
-    QR codes systems for COVID-19.\nSimple tools for bars, restaurants, offices, and other small proximity businesses.\nTurning experience into better medicine.
-    \nIodine is creating a massive community of people sharing their experience with what works - and what doesn't - in medicine.
-    \nWe believe Iodine is transforming the consumer experience around health, by providing personal, clear, actionable,...
-    \nQR code, beacon, and other mobile transactions
-    \nWe have created web and mobile tools which enable both companies and consumers to benefit from mobile transaction technologies 
-    (QR codes, beacon, and more). These benefits include mobile commerce, social media, lead generation, analytics, networking, and more
-    """
+    # text="""
+    # QR codes systems for COVID-19.\nSimple tools for bars, restaurants, offices, and other small proximity businesses.\nTurning experience into better medicine.
+    # \nIodine is creating a massive community of people sharing their experience with what works - and what doesn't - in medicine.
+    # \nWe believe Iodine is transforming the consumer experience around health, by providing personal, clear, actionable,...
+    # \nQR code, beacon, and other mobile transactions
+    # \nWe have created web and mobile tools which enable both companies and consumers to benefit from mobile transaction technologies 
+    # (QR codes, beacon, and more). These benefits include mobile commerce, social media, lead generation, analytics, networking, and more
+    # """
+    # text="Bangkok is expected to experience cloudy weather today, with brief sunny periods followed by afternoon showers."
+    text="Mobile technology is helping businesses and consumers use QR codes and other digital tools to improve transactions, generate insights, and create better experiences."
 )
 
 query = f"""

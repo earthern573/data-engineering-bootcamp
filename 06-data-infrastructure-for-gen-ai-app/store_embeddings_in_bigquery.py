@@ -6,20 +6,32 @@ from google import genai
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
+from dotenv import load_dotenv
+from openai import OpenAI
 
-GCP_PROJECT_ID = "YOUR_GCP_PROJECT_ID"
-DATASET_ID = "YOUR_DATASET_ID"
-KEYFILE = "YOUR_KEYFILE"
+load_dotenv()
+
+
+GCP_PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"
+DATASET_ID = "deb_bootcamp"
+KEYFILE = "/workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json"
 # api_key = os.environ.get("GEMINI_API_KEY")
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+# GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
 
+# def get_embedding(client, model: str = "gemini-embedding-exp-03-07", text: str = ""):
+#     result = client.models.embed_content(
+#         model=model,
+#         contents=text,
+#     )
+#     return result.embeddings[0]
 
-def get_embedding(client, model: str = "gemini-embedding-exp-03-07", text: str = ""):
-    result = client.models.embed_content(
+def get_embedding(client, model: str = "text-embedding-3-small", text: str = ""):
+    result = client.embeddings.create(
         model=model,
-        contents=text,
+        input=text,
     )
-    return result.embeddings[0]
+
+    return result.data[0].embedding
 
 
 # Embeddings' part
@@ -32,10 +44,11 @@ df = pd.DataFrame(data={
 })
 print(df.head())
 
-# Set up a Gemini client
-client = genai.Client(api_key=GEMINI_API_KEY)
+# Set up a llm (openai/ gemini) client
+# client = genai.Client(api_key=GEMINI_API_KEY)
+client = OpenAI()
 
-df["embedding"] = df.text.map(lambda x: get_embedding(client, text=x).values)
+df["embedding"] = df.text.map(lambda x: get_embedding(client, model="text-embedding-3-small" ,text=x))
 print(df.head())
 
 # BigQuery's part

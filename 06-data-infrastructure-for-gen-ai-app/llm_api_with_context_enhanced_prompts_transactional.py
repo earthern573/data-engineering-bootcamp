@@ -1,11 +1,17 @@
 import os
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
 
 from google import genai
 from google.genai import types
 
 
 # GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+# GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+
+client = OpenAI()
 
 
 def ask_gemini(client, model: str = "gemini-2.0-flash-001", prompt: str = ""):
@@ -15,9 +21,19 @@ def ask_gemini(client, model: str = "gemini-2.0-flash-001", prompt: str = ""):
     )
     return response.text
 
+def ask_openai(client, model: str = "gpt-5.4-mini", prompt: str = ""):
+
+    response = client.responses.create(
+        model=model,
+        input=prompt,
+    )
+
+    return response.output_text
+
 
 # Set up a Gemini client
-client = genai.Client(api_key=GEMINI_API_KEY)
+# client = genai.Client(api_key=GEMINI_API_KEY)
+client = OpenAI()
 
 context = """
 {
@@ -69,6 +85,8 @@ Context:
 Question:
 {question}
 """
-response = ask_gemini(client, prompt=prompt_with_context)
+# response = ask_gemini(client, prompt=prompt_with_context)
+
+response = ask_openai(client, prompt=prompt_with_context)
 
 print(response)

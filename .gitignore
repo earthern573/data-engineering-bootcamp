@@ -208,3 +208,4 @@ dataengineercafe-*.json
 03-data-lake-and-big-data-processing/iceberg/catalog
 
 00-bootcamp-project/deb-dbt-bigquery.json
+00-bootcamp-project/dags/deb-dbt-bigquery.json

@@ -4,6 +4,7 @@ import os
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.utils import timezone
+from airflow.hooks.base import BaseHook
 
 import pandas as pd
 from google import genai
@@ -51,7 +52,9 @@ def _get_embeddings():
     #     return result.embeddings[0].values
 
     def generate_embeddings(text):
-        openai_client = OpenAI()
+        conn = BaseHook.get_connection("llm_openai")
+        api_key = conn.password
+        openai_client = OpenAI(api_key=api_key)
 
         result = openai_client.embeddings.create(
             model="text-embedding-3-small",

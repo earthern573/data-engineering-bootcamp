@@ -266,8 +266,18 @@ def _system_prompt(
         task_ids="information_schema_extraction"
     )
 
-    with open(path_to_yaml, "r") as f:
-        expected_sample_model_schema = f.read()
+    if os.path.exists(path_to_yaml):
+        with open(path_to_yaml, "r") as f:
+            expected_sample_model_schema = f.read()
+
+        existing_schema_context = expected_sample_model_schema
+
+    else:
+        existing_schema_context = """
+            No existing dbt schema YAML exists. This is a new schema.
+            Please infer information from the extracted database schema
+            and masked sample data.
+        """
 
     system_prompt = f"""
         You are a data engineering assistant responsible for generating a dbt
@@ -282,7 +292,7 @@ def _system_prompt(
         {data_from_data_masking}
 
         3. Existing dbt schema YAML and tests:
-        {expected_sample_model_schema}
+        {existing_schema_context}
 
         4. Maintain original dbt schema:
         {maintain_original_schema}
@@ -508,6 +518,9 @@ def _system_prompt(
           when justified by ALL available evidence.
         - If a description is missing, infer an appropriate description when
           sufficient evidence exists.
+        - If Existing dbt schema YAML and tests is blank, or create for new schema, 
+          it is allow to omit `maintain_original_schema`. But must follow name from
+          information from `The extracted database schema:`
         - Description changes are ALWAYS allowed.
         - Description changes are NOT considered structural schema changes.
         - Do NOT add schema enhancements such as policy tags or new
@@ -583,6 +596,8 @@ def _system_prompt(
         - Do NOT add new tests to the YAML.
         - You MAY recommend additional tests separately.
         - Recommended tests must NOT be added to the YAML.
+        - If Existing dbt schema YAML and tests is blank, or create for new schema, 
+          it is allow to omit `maintain_original_schema`.
 
         If `maintain_original_test` is False:
 
@@ -948,8 +963,11 @@ def _write_schema(path_to_save_yaml, **context):
     return path_to_save_yaml
 
 def _capture_tests(path_to_yaml):
+    if not os.path.exists(path_to_yaml):
+        return []
+
     with open(path_to_yaml, "r") as f:
-        data = yaml.safe_load(f)
+        data = yaml.safe_load(f) or {}
 
     tests = []
 
@@ -968,57 +986,18 @@ def _capture_tests(path_to_yaml):
 
     return tests
 
-
-    """
-    Capture dbt models and columns from the schema YAML file.
-    """
-
-    schema_path = (
-        f"{DBT_PROJECT_DIR}/models/staging/greenery/_models.yml"
-    )
-
-    if not os.path.exists(schema_path):
-        raise AirflowException(
-            f"Schema file not found: {schema_path}"
-        )
-
-    with open(schema_path, "r") as f:
-        schema = yaml.safe_load(f)
-
-    captured_schema = []
-
-    for model in schema.get("models", []):
-        model_name = model.get("name")
-
-        if not model_name:
-            continue
-
-        # Capture model even if it has no columns
-        if not model.get("columns"):
-            captured_schema.append({
-                "model": model_name,
-                "column": None,
-            })
-            continue
-
-        for column in model.get("columns", []):
-            captured_schema.append({
-                "model": model_name,
-                "column": column.get("name"),
-            })
-
-    return captured_schema
-
 def _capture_schema(path_to_yaml):
+    if not os.path.exists(path_to_yaml):
+        return []
+
     with open(path_to_yaml, "r") as f:
-        data = yaml.safe_load(f)
+        data = yaml.safe_load(f) or {}
 
     schema = []
 
     for model in data.get("models", []):
         model_name = model.get("name")
 
-        # Capture model even if it has no columns
         if not model.get("columns"):
             schema.append({
                 "model": model_name,

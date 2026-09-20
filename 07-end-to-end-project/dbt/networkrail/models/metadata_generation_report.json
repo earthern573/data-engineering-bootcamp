@@ -1,8 +1,8 @@
 {
   "information_schema_extraction": {
     "status": "SUCCESS",
-    "tables": 1,
-    "columns": 6
+    "tables": 2,
+    "columns": 8
   },
   "sample_data_extraction": {
     "status": "SUCCESS",
@@ -27,33 +27,25 @@
     "provider": "OPENAI",
     "model": "gpt-5.4-mini",
     "generated_yaml": true,
-    "recommendation_count": 3
+    "recommendation_count": 2
   },
   "test_recommendations": {
-    "total": 3,
+    "total": 2,
     "recommendations": [
       {
         "type": "column_test",
         "model": "stg_networkrail__movements",
-        "column": "actual_timestamp",
-        "reason": "The sample data shows actual timestamps populated for all observed rows, and this timestamp appears central to the movement event record.",
-        "recommendation": "Add a not_null test if the field is expected to be present for every movement event.",
+        "column": "toc_id",
+        "reason": "The sample data shows numeric train operating company identifiers and there is a separate operating companies model, but the provided evidence does not prove completeness of the code set or a stable key relationship.",
+        "recommendation": "Add an accepted_values or relationships test for toc_id only if a dependable reference list or parent table is available.",
         "suggested_path": null
       },
       {
         "type": "column_test",
-        "model": "stg_networkrail__movements",
-        "column": "train_id",
-        "reason": "The column is named as the train identifier and is populated in the sample data, suggesting it is an important event-level field.",
-        "recommendation": "Consider adding a not_null test for train_id if every movement record should identify a train.",
-        "suggested_path": null
-      },
-      {
-        "type": "column_test",
-        "model": "stg_networkrail__movements",
-        "column": "event_type",
-        "reason": "The field is already constrained to known values, but the sample suggests it is a core categorical attribute and may be required.",
-        "recommendation": "Add a not_null test only if every movement row must be classified as an event type.",
+        "model": "stg_networkrail__operating_companies",
+        "column": "toc_id",
+        "reason": "The model name and column naming suggest a company reference dataset, but the provided schema and samples do not conclusively establish that toc_id is unique.",
+        "recommendation": "Consider a uniqueness test on toc_id if this model is intended to be a reference table with one row per operating company.",
         "suggested_path": null
       }
     ],
@@ -69,20 +61,31 @@
   },
   "capture_schema_after": {
     "status": "SUCCESS",
-    "total_models": 1,
-    "total_columns": 29
+    "total_models": 2,
+    "total_columns": 31
   },
   "dbt_schema_verification": {
     "models": {
-      "added": [],
-      "after": 1,
+      "added": [
+        "stg_networkrail__operating_companies"
+      ],
+      "after": 2,
       "before": 1,
       "removed": []
     },
     "status": "PASSED",
     "columns": {
-      "added": [],
-      "after": 29,
+      "added": [
+        [
+          "stg_networkrail__operating_companies",
+          "company_name"
+        ],
+        [
+          "stg_networkrail__operating_companies",
+          "toc_id"
+        ]
+      ],
+      "after": 31,
       "before": 29,
       "removed": []
     },
@@ -100,12 +103,12 @@
       {
         "test": "not_null",
         "model": "stg_networkrail__movements",
-        "column": "actual_timestamp"
+        "column": "actual_timestamp_utc"
       },
       {
         "test": "dbt_expectations.expect_column_to_exist",
         "model": "stg_networkrail__movements",
-        "column": "actual_timestamp"
+        "column": "actual_timestamp_utc"
       },
       {
         "test": {
@@ -114,7 +117,7 @@
           }
         },
         "model": "stg_networkrail__movements",
-        "column": "actual_timestamp"
+        "column": "actual_timestamp_utc"
       },
       {
         "test": "not_null",
@@ -154,17 +157,17 @@
     "added_tests": [
       [
         "stg_networkrail__movements",
-        "actual_timestamp",
+        "actual_timestamp_utc",
         "dbt_expectations.expect_column_to_exist"
       ],
       [
         "stg_networkrail__movements",
-        "actual_timestamp",
+        "actual_timestamp_utc",
         "not_null"
       ],
       [
         "stg_networkrail__movements",
-        "actual_timestamp",
+        "actual_timestamp_utc",
         "{'dbt_expectations.expect_column_values_to_be_of_type': {'column_type': 'timestamp'}}"
       ],
       [

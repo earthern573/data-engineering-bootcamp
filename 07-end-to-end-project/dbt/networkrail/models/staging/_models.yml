@@ -74,3 +74,10 @@ models:
         description: Indicates whether the train service was terminated.
       - name: variation_status
         description: Status describing the timing variation of the movement event.
+  - name: stg_networkrail__operating_companies
+    description: Staging model for Network Rail operating company reference data.
+    columns:
+      - name: toc_id
+        description: Train operating company identifier.
+      - name: company_name
+        description: Name of the train operating company.

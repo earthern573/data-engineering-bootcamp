@@ -1,0 +1,21 @@
+networkrail:
+  target: dbt_YOUR_NAME
+
+  outputs:
+    dbt_YOUR_NAME:
+      type: bigquery
+      method: service-account
+      project: YOUR_GCP_PROJECT_ID
+      dataset: dbt_YOUR_NAME
+      threads: 1
+      keyfile: YOUR_KEYFILE_PATH
+      location: asia-southeast1
+
+    prod:
+      type: bigquery
+      method: service-account
+      project: YOUR_GCP_PROJECT_ID
+      dataset: networkrail
+      threads: 1
+      keyfile: YOUR_KEYFILE_PATH
+      location: asia-southeast1

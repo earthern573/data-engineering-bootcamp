@@ -6,6 +6,7 @@ from airflow import DAG
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.providers.standard.operators.python import BranchPythonOperator, PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from airflow.utils import timezone
 
 from google.cloud import bigquery
@@ -22,6 +23,8 @@ BIGQUERY_DATASET = "networkrail"
 KEYFILE_FOR_GCS = "/workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-load-data-to-gcs.json"
 KEYFILE_FOR_GCS_TO_BIGQUERY = "/workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-loading-to-bigquery.json"
 
+SOURCE_FOLDER = f"{BUSINESS_DOMAIN}/raw"
+DESTINATION_FOLDER = f"{BUSINESS_DOMAIN}/processed"
 
 def _load_data_from_gcs_to_bigquery(data_interval_start, **context):
     # ds = data_interval_start.to_date_string()
@@ -63,6 +66,31 @@ def _load_data_from_gcs_to_bigquery(data_interval_start, **context):
     table = bigquery_client.get_table(table_id)
     print(f"Loaded {table.num_rows} rows and {len(table.schema)} columns to {table_id}")
 
+def _sql_transformation(
+    project_id=GCP_PROJECT_ID,
+    dataset_id=BIGQUERY_DATASET,
+    bigquery_dataset=DATA,
+    gcs_bucket=GCS_BUCKET,
+    destination_folder=DESTINATION_FOLDER):
+    hook = BigQueryHook(
+        gcp_conn_id="bigquery_dbt",
+        use_legacy_sql=False,
+    )
+
+    output_path = f"gs://{gcs_bucket}/{destination_folder}/*.parquet"
+
+    sql = f"""
+        EXPORT DATA OPTIONS(
+            uri='{output_path}',
+            format='PARQUET',
+            overwrite=true
+        )
+        AS
+        SELECT *
+        FROM `{project_id}.{dataset_id}.{bigquery_dataset}`
+    """
+
+    hook.run(sql)
 
 default_args = {
     "owner": "Skooldio",
@@ -87,6 +115,20 @@ with DAG(
         conn_id="my_spark",
     )
 
+    # Transform data in data lake using SQL if spark fail
+    transform_data_sql = PythonOperator(
+        task_id="transform_data_sql",
+        python_callable=_sql_transformation,
+        op_kwargs={
+            "project_id": GCP_PROJECT_ID,
+            "dataset_id": BIGQUERY_DATASET,
+            "bigquery_dataset": DATA,
+            "gcs_bucket": GCS_BUCKET,
+            "destination_folder": DESTINATION_FOLDER,
+        },
+        trigger_rule="one_failed",
+    )
+
     # Load data from GCS to BigQuery
     load_data_from_gcs_to_bigquery = PythonOperator(
         task_id="load_data_from_gcs_to_bigquery",
@@ -97,4 +139,4 @@ with DAG(
     end = EmptyOperator(task_id="end", trigger_rule="one_success")
 
     # Task dependencies
-    start >> transform_data >> load_data_from_gcs_to_bigquery >> end
+    start >> transform_data >> transform_data_sql >> load_data_from_gcs_to_bigquery >> end

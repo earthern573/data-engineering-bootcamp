@@ -6,10 +6,10 @@ from google.oauth2 import service_account
 from mcp.server import MCPServer
 
 
-GCP_PROJECT_ID = "YOUR_GCP_PROJECT_ID"  # Replace with your GCP project ID
-DATASET_ID = "networkrail_reporting"
+GCP_PROJECT_ID = "project-d069ecb2-d645-45e0-a1b"  # Replace with your GCP project ID
+DATASET_ID = "dbt_e2e_networkrail_reporting"
 TABLE_ID = f"{GCP_PROJECT_ID}.{DATASET_ID}.fct_movements"
-KEYFILE = "YOUR_KEYFILE_PATH"  # Replace with the path to your service account key file
+KEYFILE = "/workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json"  # Replace with the path to your service account key file
 
 mcp = MCPServer("BigQuery")
 

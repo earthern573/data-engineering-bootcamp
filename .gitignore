@@ -212,3 +212,4 @@ dataengineercafe-*.json
 
 
 07-end-to-end-project/networkrail_consumer/confluent.conf
+07-end-to-end-project/pyspark/deb-load-data-to-gcs.json

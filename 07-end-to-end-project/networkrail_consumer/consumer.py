@@ -16,12 +16,12 @@ confluent_key = parser.get("config", "confluent_key")
 confluent_secret = parser.get("config", "confluent_secret")
 
 GCP_PROJECT_ID = "YOUR_GCP_PROJECT_ID"
-BUCKET_NAME = "YOUR_BUCKET_NAME"
+BUCKET_NAME = "deb-bootcamp-06-earth"
 BUSINESS_DOMAIN = "networkrail"
 DESTINATION_FOLDER = f"{BUSINESS_DOMAIN}/raw"
-KEYFILE_PATH = "YOUR_KEYFILE_PATH"
+KEYFILE_PATH = "/workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-load-data-to-gcs.json"
 TOPIC = "networkrail-train-movements"
-CONSUMER_GROUP = "YOUR_CONSUMER_GROUP"
+CONSUMER_GROUP = "deb-bootcamp-06-earth"
 
 consumer = KafkaConsumer(
     TOPIC,

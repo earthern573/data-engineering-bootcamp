@@ -2,10 +2,10 @@ version: 2
 
 models:
   - name: stg_networkrail__movements
-    description: Staging model for Network Rail movement data.
+    description: Staging model for Network Rail movement event data.
     columns:
-      - name: actual_timestamp
-        description: The actual timestamp of the movement event.
+      - name: actual_timestamp_utc
+        description: The actual timestamp when the movement event occurred in UTC.
         tests:
           - not_null
           - dbt_expectations.expect_column_to_exist
@@ -14,7 +14,7 @@ models:
       - name: auto_expected
         description: Indicates whether the movement was automatically expected.
       - name: correction_ind
-        description: Indicates whether the movement record is a correction.
+        description: Indicates whether the movement record is marked as a correction.
       - name: current_train_id
         description: Current train identifier associated with the movement, when available.
       - name: delay_monitoring_point
@@ -24,9 +24,9 @@ models:
       - name: division_code
         description: Division code associated with the movement.
       - name: event_source
-        description: Source of the movement event, such as automatic or manual.
+        description: Source system or method that reported the movement event.
       - name: event_type
-        description: Type of movement event.
+        description: Type of movement event, such as arrival or departure.
         tests:
           - not_null
           - accepted_values:
@@ -35,7 +35,7 @@ models:
           - dbt_expectations.expect_column_values_to_be_of_type:
               column_type: string
       - name: gbtt_timestamp
-        description: The planned GBTT timestamp for the movement, when available.
+        description: Planned GBTT timestamp for the movement, when available.
       - name: line_ind
         description: Line indicator associated with the movement.
       - name: loc_stanox

@@ -9,7 +9,7 @@ source as (
 , renamed_recasted as (
 
     select
-        actual_timestamp
+        actual_timestamp AS actual_timestamp_utc
         , auto_expected
         , correction_ind
         , current_train_id
@@ -46,7 +46,7 @@ source as (
 
     select
         event_type
-        , actual_timestamp
+        , actual_timestamp_utc
         , event_source
         , train_id
         , variation_status

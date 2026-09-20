@@ -24,7 +24,7 @@ KEYFILE_FOR_GCS_TO_BIGQUERY = "/workspaces/data-engineering-bootcamp/00-bootcamp
 
 
 def _load_data_from_gcs_to_bigquery(data_interval_start, **context):
-    ds = data_interval_start.to_date_string()
+    # ds = data_interval_start.to_date_string()
 
     # Your code here
     keyfile_bigquery = KEYFILE_FOR_GCS_TO_BIGQUERY
@@ -47,8 +47,8 @@ def _load_data_from_gcs_to_bigquery(data_interval_start, **context):
         time_partitioning=bigquery.TimePartitioning(
             type_=bigquery.TimePartitioningType.DAY,
             field="actual_timestamp",
-    ),
-)
+        ),
+    )
 
     bucket_name = GCS_BUCKET
     destination_blob_name = f"{BUSINESS_DOMAIN}/processed/*.parquet"

@@ -1,14 +1,14 @@
 networkrail:
-  target: dbt_YOUR_NAME
+  target: dbt_earth_06
 
   outputs:
-    dbt_YOUR_NAME:
+    dbt_earth_06:
       type: bigquery
       method: service-account
-      project: YOUR_GCP_PROJECT_ID
-      dataset: dbt_YOUR_NAME
+      project: project-d069ecb2-d645-45e0-a1b
+      dataset: dbt_earth_06
       threads: 1
-      keyfile: YOUR_KEYFILE_PATH
+      keyfile: /workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json
       location: asia-southeast1
 
     prod:

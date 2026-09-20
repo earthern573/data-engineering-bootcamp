@@ -1,12 +1,12 @@
 networkrail:
-  target: dbt_earth_06
+  target: dbt_e2e_networkrail
 
   outputs:
-    dbt_earth_06:
+    dbt_e2e_networkrail:
       type: bigquery
       method: service-account
       project: project-d069ecb2-d645-45e0-a1b
-      dataset: dbt_earth_06
+      dataset: dbt_e2e_networkrail
       threads: 1
       keyfile: /workspaces/data-engineering-bootcamp/00-bootcamp-project/deb-dbt-bigquery.json
       location: asia-southeast1

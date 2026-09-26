@@ -86,6 +86,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ${AIRFLOW_PROJ_DIR:-.}/tests:/opt/airflow/tests
     - ${AIRFLOW_PROJ_DIR:-.}/dbt:/opt/airflow/dbt
+    - /workspaces/data-engineering-bootcamp/07-end-to-end-project/dbt/networkrail:/opt/airflow/dbt/networkrail
     - ${AIRFLOW_PROJ_DIR:-.}/pyspark:/opt/spark/pyspark
     - ${AIRFLOW_PROJ_DIR:-.}/spark-events:/opt/spark/spark-events
   user: "${AIRFLOW_UID:-50000}:0"

@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: stg_networkrail__movements
+    description: Staging model for Network Rail movement event data.
+    columns:
+      - name: actual_timestamp_utc
+        description: The actual timestamp when the movement event occurred in UTC.
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_to_exist
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: timestamp
+      - name: auto_expected
+        description: Indicates whether the movement was automatically expected.
+      - name: correction_ind
+        description: Indicates whether the movement record is marked as a correction.
+      - name: current_train_id
+        description: Current train identifier associated with the movement, when available.
+      - name: delay_monitoring_point
+        description: Indicates whether the event is a delay monitoring point.
+      - name: direction_ind
+        description: Direction indicator for the movement.
+      - name: division_code
+        description: Division code associated with the movement.
+      - name: event_source
+        description: Source system or method that reported the movement event.
+      - name: event_type
+        description: Type of movement event, such as arrival or departure.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ARRIVAL', 'DEPARTURE']
+          - dbt_expectations.expect_column_to_exist
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: string
+      - name: gbtt_timestamp
+        description: Planned GBTT timestamp for the movement, when available.
+      - name: line_ind
+        description: Line indicator associated with the movement.
+      - name: loc_stanox
+        description: STANOX location code for the movement event.
+      - name: next_report_run_time
+        description: Time until the next report run, when available.
+      - name: next_report_stanox
+        description: STANOX code for the next reporting location.
+      - name: offroute_ind
+        description: Indicates whether the movement is off route.
+      - name: original_loc_stanox
+        description: Original location STANOX code, when available.
+      - name: original_loc_timestamp
+        description: Original location timestamp, when available.
+      - name: planned_event_type
+        description: Planned event type for the movement.
+      - name: planned_timestamp
+        description: Planned timestamp of the movement event.
+      - name: platform
+        description: Platform associated with the movement event, when available.
+      - name: reporting_stanox
+        description: STANOX code of the reporting location.
+      - name: route
+        description: Route associated with the movement, when available.
+      - name: timetable_variation
+        description: Difference between the planned and actual timetable timing, in minutes.
+      - name: toc_id
+        description: Train operating company identifier.
+      - name: train_id
+        description: Train identifier.
+      - name: train_file_address
+        description: File address associated with the train record.
+      - name: train_service_code
+        description: Train service code.
+      - name: train_terminated
+        description: Indicates whether the train service was terminated.
+      - name: variation_status
+        description: Status describing the timing variation of the movement event.
+  - name: stg_networkrail__operating_companies
+    description: Staging model for Network Rail operating company reference data.
+    columns:
+      - name: toc_id
+        description: Train operating company identifier.
+      - name: company_name
+        description: Name of the train operating company.

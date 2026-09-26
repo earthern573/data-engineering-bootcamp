@@ -1,0 +1,200 @@
+{
+  "information_schema_extraction": {
+    "status": "SUCCESS",
+    "tables": 2,
+    "columns": 8
+  },
+  "sample_data_extraction": {
+    "status": "SUCCESS",
+    "records": 100
+  },
+  "data_masking": {
+    "status": "SUCCESS",
+    "records": 100
+  },
+  "system_prompt": {
+    "status": "SUCCESS",
+    "generated": true
+  },
+  "llm_connection_test": {
+    "status": "SUCCESS",
+    "provider": "OPENAI",
+    "model": "gpt-5.4-mini",
+    "connection_id": "llm_openai"
+  },
+  "calling_LLM": {
+    "status": "SUCCESS",
+    "provider": "OPENAI",
+    "model": "gpt-5.4-mini",
+    "generated_yaml": true,
+    "recommendation_count": 2
+  },
+  "test_recommendations": {
+    "total": 2,
+    "recommendations": [
+      {
+        "type": "column_test",
+        "model": "stg_networkrail__movements",
+        "column": "toc_id",
+        "reason": "The sample data shows numeric train operating company identifiers and there is a separate operating companies model, but the provided evidence does not prove completeness of the code set or a stable key relationship.",
+        "recommendation": "Add an accepted_values or relationships test for toc_id only if a dependable reference list or parent table is available.",
+        "suggested_path": null
+      },
+      {
+        "type": "column_test",
+        "model": "stg_networkrail__operating_companies",
+        "column": "toc_id",
+        "reason": "The model name and column naming suggest a company reference dataset, but the provided schema and samples do not conclusively establish that toc_id is unique.",
+        "recommendation": "Consider a uniqueness test on toc_id if this model is intended to be a reference table with one row per operating company.",
+        "suggested_path": null
+      }
+    ],
+    "note": "Recommendations are based on the available schema and masked sample data and should be reviewed before implementation."
+  },
+  "capture_schema_before": {
+    "status": "SUCCESS",
+    "total_models": 1,
+    "total_columns": 29
+  },
+  "write_to_yaml": {
+    "status": "SUCCESS"
+  },
+  "capture_schema_after": {
+    "status": "SUCCESS",
+    "total_models": 2,
+    "total_columns": 31
+  },
+  "dbt_schema_verification": {
+    "models": {
+      "added": [
+        "stg_networkrail__operating_companies"
+      ],
+      "after": 2,
+      "before": 1,
+      "removed": []
+    },
+    "status": "PASSED",
+    "columns": {
+      "added": [
+        [
+          "stg_networkrail__operating_companies",
+          "company_name"
+        ],
+        [
+          "stg_networkrail__operating_companies",
+          "toc_id"
+        ]
+      ],
+      "after": 31,
+      "before": 29,
+      "removed": []
+    },
+    "maintain_original_schema": false
+  },
+  "capture_tests_before": {
+    "status": "SUCCESS",
+    "total_tests": 0,
+    "tests": []
+  },
+  "capture_tests_after": {
+    "status": "SUCCESS",
+    "total_tests": 7,
+    "tests": [
+      {
+        "test": "not_null",
+        "model": "stg_networkrail__movements",
+        "column": "actual_timestamp_utc"
+      },
+      {
+        "test": "dbt_expectations.expect_column_to_exist",
+        "model": "stg_networkrail__movements",
+        "column": "actual_timestamp_utc"
+      },
+      {
+        "test": {
+          "dbt_expectations.expect_column_values_to_be_of_type": {
+            "column_type": "timestamp"
+          }
+        },
+        "model": "stg_networkrail__movements",
+        "column": "actual_timestamp_utc"
+      },
+      {
+        "test": "not_null",
+        "model": "stg_networkrail__movements",
+        "column": "event_type"
+      },
+      {
+        "test": {
+          "accepted_values": {
+            "values": [
+              "ARRIVAL",
+              "DEPARTURE"
+            ]
+          }
+        },
+        "model": "stg_networkrail__movements",
+        "column": "event_type"
+      },
+      {
+        "test": "dbt_expectations.expect_column_to_exist",
+        "model": "stg_networkrail__movements",
+        "column": "event_type"
+      },
+      {
+        "test": {
+          "dbt_expectations.expect_column_values_to_be_of_type": {
+            "column_type": "string"
+          }
+        },
+        "model": "stg_networkrail__movements",
+        "column": "event_type"
+      }
+    ]
+  },
+  "dbt_test_verification": {
+    "status": "PASSED",
+    "added_tests": [
+      [
+        "stg_networkrail__movements",
+        "actual_timestamp_utc",
+        "dbt_expectations.expect_column_to_exist"
+      ],
+      [
+        "stg_networkrail__movements",
+        "actual_timestamp_utc",
+        "not_null"
+      ],
+      [
+        "stg_networkrail__movements",
+        "actual_timestamp_utc",
+        "{'dbt_expectations.expect_column_values_to_be_of_type': {'column_type': 'timestamp'}}"
+      ],
+      [
+        "stg_networkrail__movements",
+        "event_type",
+        "dbt_expectations.expect_column_to_exist"
+      ],
+      [
+        "stg_networkrail__movements",
+        "event_type",
+        "not_null"
+      ],
+      [
+        "stg_networkrail__movements",
+        "event_type",
+        "{'accepted_values': {'values': ['ARRIVAL', 'DEPARTURE']}}"
+      ],
+      [
+        "stg_networkrail__movements",
+        "event_type",
+        "{'dbt_expectations.expect_column_values_to_be_of_type': {'column_type': 'string'}}"
+      ]
+    ],
+    "removed_tests": [],
+    "maintain_original_test": false
+  },
+  "dbt_test": {
+    "status": "UNKNOWN"
+  }
+}

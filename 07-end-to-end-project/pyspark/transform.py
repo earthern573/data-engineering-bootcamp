@@ -2,11 +2,11 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructField, StructType, StringType, TimestampType
 
 
-BUCKET_NAME = "YOUR_BUCKET_NAME"
+BUCKET_NAME = "deb-bootcamp-06-earth"
 BUSINESS_DOMAIN = "networkrail"
 SOURCE_FOLDER = f"{BUSINESS_DOMAIN}/raw"
 DESTINATION_FOLDER = f"{BUSINESS_DOMAIN}/processed"
-KEYFILE_PATH = "/opt/spark/pyspark/YOUR_KEYFILE.json"
+KEYFILE_PATH = "/opt/spark/pyspark/deb-load-data-to-gcs.json"
 
 spark = SparkSession.builder.appName("demo_gcs") \
     .config("spark.memory.offHeap.enabled", "true") \
